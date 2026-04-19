@@ -1,13 +1,14 @@
-import { ArrowLeft, Search, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Search, ChevronRight, CheckSquare, Square } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
+import { cn } from '../lib/utils';
 
 export default function Fleet() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { agencies } = useData();
+  const { agencies, toggleMP } = useData();
   const [searchTerm, setSearchTerm] = useState('');
 
   const activeFilters = {
@@ -97,17 +98,65 @@ export default function Fleet() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.05 }}
               key={agency.id}
-              onClick={() => navigate(`/agency/${agency.id}`)}
-              className="bg-white p-5 rounded-xl border border-surface-container hover:border-primary group cursor-pointer transition-all flex items-center justify-between shadow-sm hover:shadow-md"
+              className={cn(
+                "p-5 rounded-xl border transition-all flex items-center justify-between shadow-sm hover:shadow-md",
+                agency.isMP 
+                  ? "bg-success border-success text-white shadow-lg scale-[1.02]" 
+                  : "bg-white border-surface-container hover:border-primary"
+              )}
             >
-              <div>
-                <h3 className="text-lg font-bold text-primary tracking-tight group-hover:translate-x-1 transition-transform">{agency.name}</h3>
+              <div 
+                className="flex-grow cursor-pointer"
+                onClick={() => navigate(`/agency/${agency.id}`)}
+              >
+                <div className="flex items-center gap-3">
+                  <h3 className={cn(
+                    "text-lg font-bold tracking-tight group-hover:translate-x-1 transition-transform",
+                    agency.isMP ? "text-white" : "text-primary"
+                  )}>
+                    {agency.name}
+                  </h3>
+                  {agency.isMP && (
+                    <span className="text-[10px] font-black bg-white text-success px-1.5 py-0.5 rounded-sm uppercase tracking-tighter shadow-sm">MP OK</span>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[10px] font-mono text-on-surface-variant uppercase tracking-wider">{agency.id}</span>
-                  <span className="text-[10px] font-bold text-secondary uppercase tracking-widest px-2 py-0.5 bg-secondary/5 rounded">{agency.city}</span>
+                  <span className={cn(
+                    "text-[10px] font-mono uppercase tracking-wider",
+                    agency.isMP ? "text-white/80" : "text-on-surface-variant"
+                  )}>
+                    {agency.id}
+                  </span>
+                  <span className={cn(
+                    "text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded",
+                    agency.isMP ? "bg-white/20 text-white" : "bg-secondary/5 text-secondary"
+                  )}>
+                    {agency.city}
+                  </span>
                 </div>
               </div>
-              <ChevronRight className="text-outline-variant group-hover:text-primary transition-all group-hover:translate-x-1" size={20} />
+              
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleMP(agency.id);
+                  }}
+                  className={cn(
+                    "flex flex-col items-center gap-1 p-3 rounded-xl transition-all shadow-sm",
+                    agency.isMP ? "text-white bg-white/20 hover:bg-white/30" : "text-on-surface-variant hover:bg-surface-container"
+                  )}
+                >
+                  {agency.isMP ? <CheckSquare size={24} /> : <Square size={24} />}
+                  <span className="text-[9px] font-black uppercase tracking-widest">MP</span>
+                </button>
+                <div onClick={() => navigate(`/agency/${agency.id}`)}>
+                  <ChevronRight className={cn(
+                    "transition-all group-hover:translate-x-1",
+                    agency.isMP ? "text-white" : "text-outline-variant group-hover:text-primary"
+                  )} size={20} />
+                </div>
+              </div>
             </motion.div>
           ))
         )}

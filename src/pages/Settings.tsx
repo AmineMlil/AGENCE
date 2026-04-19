@@ -16,6 +16,8 @@ export default function Settings() {
   const [editingClientValue, setEditingClientValue] = useState('');
 
   const [importStatus, setImportStatus] = useState<string | null>(null);
+  const [resetClient, setResetClient] = useState('');
+  const { resetMPForClient, resetAllMP } = useData();
 
   const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -228,6 +230,63 @@ export default function Settings() {
                 ))}
               </div>
             </div>
+          </div>
+
+          {/* Maintenance (MP) Operations */}
+          <div className="bg-white p-8 rounded-xl border border-surface-container shadow-sm space-y-8">
+            <div className="flex items-center gap-3 border-b border-surface-container pb-4">
+              <History className="text-primary" size={24} />
+              <h4 className="text-xl font-bold text-primary">Gestion de la Maintenance (MP)</h4>
+            </div>
+            
+            <div className="space-y-6">
+              <div className="flex flex-col md:flex-row items-end gap-6 bg-surface-container-low p-6 rounded-xl border border-surface-container">
+                <div className="flex-grow space-y-3">
+                  <label className="text-xs font-bold tracking-wider text-secondary uppercase">Par Client (Ciblé)</label>
+                  <select 
+                    value={resetClient}
+                    onChange={(e) => setResetClient(e.target.value)}
+                    className="w-full bg-white border border-surface-container focus:border-primary focus:ring-0 text-sm py-3 px-4 rounded-lg cursor-pointer"
+                  >
+                    <option value="">Sélectionner un client...</option>
+                    {clients.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <button 
+                  onClick={() => {
+                    if(!resetClient) return;
+                    if(confirm(`Réinitialiser TOUTES les agences du client "${resetClient}" ?`)) {
+                      resetMPForClient(resetClient);
+                      setResetClient('');
+                    }
+                  }}
+                  disabled={!resetClient}
+                  className="px-10 py-3 bg-secondary text-white font-bold rounded-lg shadow-sm hover:opacity-90 transition-all disabled:opacity-30 uppercase text-[10px] tracking-widest whitespace-nowrap"
+                >
+                  Réinitialiser le client
+                </button>
+              </div>
+
+              <div className="bg-error/5 p-6 rounded-xl border border-error/20 flex flex-col items-center gap-4">
+                <div className="text-center">
+                  <h5 className="font-bold text-error uppercase tracking-widest text-xs mb-1">Zone de Danger (Global)</h5>
+                  <p className="text-[11px] text-on-surface-variant font-medium">Réinitialiser l'état MP de absolument TOUTES les agences du système.</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    if(confirm("ATTENTION : Cela va réinitialiser les cases MP de TOUTES les agences du système. Continuer ?")) {
+                      resetAllMP();
+                    }
+                  }}
+                  className="px-12 py-3 bg-error text-white font-black rounded-lg shadow-md hover:scale-105 transition-all uppercase text-[10px] tracking-widest"
+                >
+                  Tout réinitialiser (MP)
+                </button>
+              </div>
+            </div>
+            <p className="text-[11px] text-on-surface-variant italic font-medium">
+              Note: Cette action remettra toutes les cases "MP" à l'état décoché pour le client sélectionné.
+            </p>
           </div>
         </div>
 

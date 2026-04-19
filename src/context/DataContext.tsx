@@ -16,6 +16,7 @@ export interface Agency {
   computerName?: string;
   remotePort?: string;
   remoteAddress?: string;
+  isMP?: boolean;
 }
 
 interface DataContextType {
@@ -33,6 +34,9 @@ interface DataContextType {
   removeAgency: (id: string) => void;
   importBulkData: (newCities: string[], newClients: string[], newAgencies?: Agency[]) => void;
   clearAllData: () => void;
+  toggleMP: (agencyId: string) => void;
+  resetMPForClient: (clientName: string) => void;
+  resetAllMP: () => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -183,6 +187,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const toggleMP = (agencyId: string) => {
+    setAgencies(prev => prev.map(a => a.id === agencyId ? { ...a, isMP: !a.isMP } : a));
+  };
+
+  const resetMPForClient = (clientName: string) => {
+    setAgencies(prev => prev.map(a => a.client === clientName ? { ...a, isMP: false } : a));
+  };
+
+  const resetAllMP = () => {
+    setAgencies(prev => prev.map(a => ({ ...a, isMP: false })));
+  };
+
   return (
     <DataContext.Provider value={{ 
       cities, 
@@ -198,7 +214,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       updateAgency,
       removeAgency,
       importBulkData,
-      clearAllData
+      clearAllData,
+      toggleMP,
+      resetMPForClient,
+      resetAllMP
     }}>
       {children}
     </DataContext.Provider>

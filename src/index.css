@@ -29,6 +29,9 @@
   --color-error: #ef4444;
   --color-error-container: #fee2e2;
 
+  --color-success: #10b981;
+  --color-on-success: #ffffff;
+
   --animate-slam-in: slamIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
