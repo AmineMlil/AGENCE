@@ -6,7 +6,7 @@ import { useData } from '../context/DataContext';
 import { useState } from 'react';
 
 export default function Dashboard() {
-  const { cities, clients } = useData();
+  const { cities, clients, currentUser } = useData();
   const navigate = useNavigate();
   const [selectedCity, setSelectedCity] = useState('');
   const [selectedClient, setSelectedClient] = useState('');
@@ -23,14 +23,33 @@ export default function Dashboard() {
   return (
     <div className="space-y-12">
       {/* Editorial Header Section */}
-      <section className="animate-slam-in">
-        <span className="text-primary font-bold tracking-[0.2em] text-[10px] uppercase mb-2 block">Recherche de machine</span>
-        <h2 className="text-4xl font-black text-primary leading-tight mb-4 lg:text-5xl tracking-tighter">
-          NCRM 
-          <span className="block text-on-surface-variant font-medium text-lg lg:text-xl tracking-normal mt-2">
-            votre partenaire métier
+      <section className="animate-slam-in bg-white p-8 rounded-2xl border border-surface-container shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="flex items-center gap-6">
+          <div className={cn(
+            "w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-black text-white shadow-xl rotate-3 hover:rotate-0 transition-transform duration-500",
+            currentUser?.role === 'admin' ? "bg-primary" : "bg-secondary"
+          )}>
+            {currentUser?.name.charAt(0)}
+          </div>
+          <div>
+            <span className="text-primary font-bold tracking-[0.2em] text-[10px] uppercase mb-1 block">Bonjour, {currentUser?.name}</span>
+            <h2 className="text-4xl font-black text-on-surface leading-tight tracking-tighter">
+              NCRM 
+              <span className="block text-on-surface-variant font-medium text-lg tracking-normal mt-1">
+                La gestion simplifiée de votre flotte
+              </span>
+            </h2>
+          </div>
+        </div>
+        <div className="flex flex-col items-end">
+          <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-1">Rôle Actuel</span>
+          <span className={cn(
+            "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
+            currentUser?.role === 'admin' ? "bg-primary text-white" : "bg-surface-container text-on-surface-variant"
+          )}>
+            {currentUser?.role === 'admin' ? 'Administrateur' : 'Agent Technique'}
           </span>
-        </h2>
+        </div>
       </section>
 
       {/* Configuration & Filters Bento */}

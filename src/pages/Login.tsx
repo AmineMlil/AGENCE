@@ -1,15 +1,26 @@
-import { ArrowRight, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useData } from '../context/DataContext';
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('admin@ncr-maroc.com');
+  const [password, setPassword] = useState('1234');
+  const [error, setError] = useState(false);
+  
   const navigate = useNavigate();
+  const { login } = useData();
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    navigate('/dashboard');
+    if (login(email)) {
+      navigate('/dashboard');
+    } else {
+      setError(true);
+      setTimeout(() => setError(false), 3000);
+    }
   };
 
   return (
@@ -42,15 +53,21 @@ export default function Login() {
             className="bg-white p-8 rounded-xl shadow-sm border border-surface-container"
           >
             <form onSubmit={handleLogin} className="space-y-6">
+              {error && (
+                <div className="p-3 bg-error/10 border border-error/20 rounded-lg flex items-center gap-2 text-error text-[11px] font-bold uppercase tracking-wider animate-shake">
+                  <AlertCircle size={14} /> Identification échouée
+                </div>
+              )}
               <div className="space-y-2">
                 <label className="block font-medium text-[10px] uppercase tracking-[0.05em] text-on-surface-variant">
-                  Nom d'utilisateur
+                  Email professionnel
                 </label>
                 <div className="relative flex items-center">
                   <User className="absolute left-4 text-on-surface-variant" size={18} />
                   <input 
-                    type="text" 
-                    defaultValue="v.martin@precision-fleet.com"
+                    type="email" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="w-full bg-white border-b-2 border-surface-container focus:border-primary focus:ring-0 px-12 py-4 transition-all outline-none text-on-surface font-medium placeholder:text-on-surface-variant/40 rounded-t-lg shadow-sm"
                   />
                 </div>
@@ -64,6 +81,8 @@ export default function Login() {
                   <Lock className="absolute left-4 text-on-surface-variant" size={18} />
                   <input 
                     type={showPassword ? 'text' : 'password'} 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     className="w-full bg-white border-b-2 border-surface-container focus:border-primary focus:ring-0 px-12 py-4 transition-all outline-none text-on-surface font-medium placeholder:text-on-surface-variant/40 rounded-t-lg shadow-sm"
                   />

@@ -19,10 +19,20 @@ export interface Agency {
   isMP?: boolean;
 }
 
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'user';
+  createdAt: string;
+}
+
 interface DataContextType {
   cities: string[];
   clients: string[];
   agencies: Agency[];
+  users: User[];
+  currentUser: User | null;
   addCity: (city: string) => void;
   removeCity: (city: string) => void;
   updateCity: (oldName: string, newName: string) => void;
@@ -32,11 +42,16 @@ interface DataContextType {
   addAgency: (agency: Agency) => void;
   updateAgency: (id: string, updates: Partial<Agency>) => void;
   removeAgency: (id: string) => void;
+  addUser: (user: User) => void;
+  removeUser: (id: string) => void;
+  updateUser: (id: string, updates: Partial<User>) => void;
   importBulkData: (newCities: string[], newClients: string[], newAgencies?: Agency[]) => void;
   clearAllData: () => void;
   toggleMP: (agencyId: string) => void;
   resetMPForClient: (clientName: string) => void;
   resetAllMP: () => void;
+  login: (email: string) => boolean;
+  logout: () => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -89,6 +104,40 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     ];
   });
 
+  const [users, setUsers] = useState<User[]>(() => {
+    try {
+      const saved = localStorage.getItem('ncrm_users');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error("Failed to load users", e);
+    }
+    return [
+      { id: 'USR-001', name: 'Admin Principal', email: 'admin@ncr-maroc.com', role: 'admin', createdAt: new Date().toISOString() },
+      { id: 'USR-002', name: 'Agent Logistique', email: 'agent@ncr-maroc.com', role: 'user', createdAt: new Date().toISOString() },
+    ];
+  });
+
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    try {
+      const saved = sessionStorage.getItem('ncrm_current_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      if (currentUser) {
+        sessionStorage.setItem('ncrm_current_user', JSON.stringify(currentUser));
+      } else {
+        sessionStorage.removeItem('ncrm_current_user');
+      }
+    } catch (e) {
+      console.error("Failed to save current user", e);
+    }
+  }, [currentUser]);
+
   useEffect(() => {
     try {
       localStorage.setItem('ncrm_cities', JSON.stringify(cities));
@@ -113,10 +162,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [agencies]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem('ncrm_users', JSON.stringify(users));
+    } catch (e) {
+      console.error("Failed to save users", e);
+    }
+  }, [users]);
+
   const clearAllData = () => {
     localStorage.removeItem('ncrm_cities');
     localStorage.removeItem('ncrm_clients');
     localStorage.removeItem('ncrm_agencies');
+    localStorage.removeItem('ncrm_users');
     setCities(['Paris', 'Lyon', 'Marseille', 'Bordeaux']);
     setClients(['Industries Globales SAS', 'Logistique Avancée S.A.', 'Vector Manufacturing']);
     setAgencies([
@@ -124,6 +182,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       { id: 'DEP-BX-012', name: 'Bordeaux Sud - Maintenance', city: 'Bordeaux', client: 'Logistique Avancée S.A.', vehiclesCount: 18, sn: 'SN-BX-012' },
       { id: 'LOG-PA-045', name: 'Paris Est - Logistique', city: 'Paris', client: 'Vector Manufacturing', vehiclesCount: 55, sn: 'SN-PA-045' },
       { id: 'HUB-MA-009', name: 'Marseille Port - Transit', city: 'Marseille', client: 'Industries Globales SAS', vehiclesCount: 30, sn: 'SN-MA-009' },
+    ]);
+    setUsers([
+      { id: 'USR-001', name: 'Admin Principal', email: 'admin@ncr-maroc.com', role: 'admin', createdAt: new Date().toISOString() },
+      { id: 'USR-002', name: 'Agent Logistique', email: 'agent@ncr-maroc.com', role: 'user', createdAt: new Date().toISOString() },
     ]);
   };
 
@@ -199,11 +261,40 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     setAgencies(prev => prev.map(a => ({ ...a, isMP: false })));
   };
 
+  const addUser = (user: User) => {
+    setUsers(prev => [...prev, user]);
+  };
+
+  const removeUser = (id: string) => {
+    setUsers(prev => prev.filter(u => u.id !== id));
+  };
+
+  const updateUser = (id: string, updates: Partial<User>) => {
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
+  };
+
+  const login = (email: string) => {
+    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (user) {
+      setCurrentUser(user);
+      return true;
+    }
+    return false;
+  };
+
+  const logout = () => {
+    setCurrentUser(null);
+    sessionStorage.removeItem('ncrm_current_user');
+    window.location.href = '/login';
+  };
+
   return (
     <DataContext.Provider value={{ 
       cities, 
       clients, 
       agencies,
+      users,
+      currentUser,
       addCity, 
       removeCity, 
       updateCity, 
@@ -213,11 +304,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       addAgency,
       updateAgency,
       removeAgency,
+      addUser,
+      removeUser,
+      updateUser,
       importBulkData,
       clearAllData,
       toggleMP,
       resetMPForClient,
-      resetAllMP
+      resetAllMP,
+      login,
+      logout
     }}>
       {children}
     </DataContext.Provider>

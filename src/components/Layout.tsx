@@ -1,12 +1,13 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Truck, Building2, Settings, Menu, User } from 'lucide-react';
+import { LayoutDashboard, Truck, Building2, Settings, Menu, User, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useState } from 'react';
+import { useData } from '../context/DataContext';
 
-const Sidebar = () => {
+const Sidebar = ({ isExpanded, setIsExpanded }: { isExpanded: boolean, setIsExpanded: (v: boolean) => void }) => {
   const location = useLocation();
-  const [isHovered, setIsHovered] = useState(false);
+  const { currentUser, logout } = useData();
 
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
@@ -16,23 +17,23 @@ const Sidebar = () => {
 
   return (
     <aside 
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={() => setIsExpanded(true)}
+      onMouseLeave={() => setIsExpanded(false)}
       className={cn(
         "fixed left-0 top-0 h-screen bg-sidebar-bg dark:bg-slate-950 flex flex-col gap-1 p-4 border-r border-surface-container transition-all duration-300 z-[60]",
-        isHovered ? "w-60" : "w-20"
+        isExpanded ? "w-60" : "w-20"
       )}
     >
-      <div className="mb-8 px-4 py-2">
+      <Link to="/dashboard" className="mb-8 px-4 py-2 block">
         <h1 className={cn(
           "text-primary dark:text-blue-100 font-black text-2xl tracking-tighter transition-opacity duration-300",
-          !isHovered && "opacity-0"
+          !isExpanded && "opacity-0"
         )}>
           NCRM
         </h1>
-        {isHovered && <p className="text-slate-500 text-[10px] uppercase tracking-widest mt-1">Votre partenaire métier</p>}
-        {!isHovered && <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary font-black">N</div>}
-      </div>
+        {isExpanded && <p className="text-slate-500 text-[10px] uppercase tracking-widest mt-1">Votre partenaire métier</p>}
+        {!isExpanded && <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary font-black">N</div>}
+      </Link>
 
       <nav className="flex-grow space-y-1">
         {navItems.map((item) => {
@@ -50,7 +51,7 @@ const Sidebar = () => {
             >
               <item.icon size={20} className={cn(isActive ? "text-primary" : "text-slate-500")} />
               <AnimatePresence>
-                {isHovered && (
+                {isExpanded && (
                   <motion.span
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -64,25 +65,46 @@ const Sidebar = () => {
             </Link>
           );
         })}
+        
+        <button
+          onClick={() => {
+            logout();
+          }}
+          className={cn(
+            "w-full px-4 py-3 flex items-center gap-3 rounded-lg transition-all duration-300 ease-in-out group text-error hover:bg-error/10"
+          )}
+        >
+          <LogOut size={20} className="text-error" />
+          <AnimatePresence>
+            {isExpanded && (
+              <motion.span
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                className="font-inter text-sm tracking-[0.02em] font-bold whitespace-nowrap"
+              >
+                Déconnexion
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </button>
       </nav>
 
       <div className="mt-auto pt-6 border-t border-slate-200/10 flex items-center gap-4 px-4 pb-4 overflow-hidden">
-        <div className="w-10 h-10 rounded-full bg-surface-container-highest flex-shrink-0 overflow-hidden">
-          <img 
-            alt="Manager Avatar" 
-            className="w-full h-full object-cover" 
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCg2Ze2UI3vspoNUxe-2gdb-If2g8btCI6La2SFq-ALNEGAqs9nF0E0xB0Ay5ZvCqHqfN0G9cqIh8GOYm7hKwwpL-27JZU_GKDGCkGF6z92kNRSasxEYDLWwayo62MBaJah-rx77XE5dU-2LX_FmFh6xfjQNCxcoG5TRMXWTrVgg8zgmKhvdtXnGMJJr_Vi4paBZLu0v4AGJMVy52f5Eq1cqqWxqoFOTeVnppZ6BhZAIM9-RwKHUy03fm2olX77kdGU-_rXgLwqYog"
-            referrerPolicy="no-referrer"
-          />
+        <div className={cn(
+          "w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-black text-xs text-white shadow-lg",
+          currentUser?.role === 'admin' ? "bg-primary" : "bg-secondary"
+        )}>
+          {currentUser?.name.charAt(0)}
         </div>
-        {isHovered && (
+        {isExpanded && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex flex-col whitespace-nowrap"
+            className="flex flex-col whitespace-nowrap overflow-hidden"
           >
-            <span className="font-semibold text-sm text-primary dark:text-blue-100">Admin Flotte</span>
-            <span className="text-[10px] text-slate-500">v2.4.0</span>
+            <span className="font-semibold text-sm text-primary dark:text-blue-100 truncate w-32">{currentUser?.name}</span>
+            <span className="text-[10px] text-slate-500 uppercase tracking-widest">{currentUser?.role === 'admin' ? 'Administrateur' : 'Agent'}</span>
           </motion.div>
         )}
       </div>
@@ -90,20 +112,29 @@ const Sidebar = () => {
   );
 };
 
-const TopBar = () => {
+const TopBar = ({ onMenuClick }: { onMenuClick: () => void }) => {
+  const { currentUser } = useData();
   return (
     <header className="bg-white dark:bg-slate-900 flex justify-between items-center px-8 h-20 w-full sticky top-0 z-50 border-b border-surface-container ml-0 lg:ml-0">
       <div className="flex items-center gap-4">
-        <button className="text-primary dark:text-blue-400 p-2 hover:bg-surface-container rounded-lg transition-colors">
+        <button 
+          onClick={onMenuClick}
+          className="text-primary dark:text-blue-400 p-2 hover:bg-surface-container rounded-lg transition-colors active:scale-90"
+        >
           <Menu size={20} />
         </button>
-        <h2 className="text-primary dark:text-blue-100 font-bold tracking-tighter text-lg uppercase hidden sm:block">
-          NCRM
-        </h2>
+        <Link to="/dashboard" className="transition-transform active:scale-95">
+          <h2 className="text-primary dark:text-blue-100 font-bold tracking-tighter text-lg uppercase hidden sm:block">
+            NCRM
+          </h2>
+        </Link>
       </div>
       <div className="flex items-center gap-4 sm:gap-6">
-        <div className="hidden md:flex gap-8">
-          <span className="text-primary dark:text-blue-300 font-bold border-b-2 border-primary pb-1 cursor-pointer">Paramètres Système</span>
+        <div className="hidden md:flex gap-4 items-center">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Session active:</span>
+          <span className="text-primary dark:text-blue-300 font-black text-xs border-b-2 border-primary pb-1 cursor-default">
+            {currentUser?.email}
+          </span>
         </div>
       </div>
     </header>
@@ -111,11 +142,13 @@ const TopBar = () => {
 };
 
 export default function Layout() {
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+
   return (
     <div className="flex min-h-screen">
-      <Sidebar />
+      <Sidebar isExpanded={isSidebarExpanded} setIsExpanded={setIsSidebarExpanded} />
       <div className="flex-grow lg:pl-20 transition-all duration-300">
-        <TopBar />
+        <TopBar onMenuClick={() => setIsSidebarExpanded(!isSidebarExpanded)} />
         <main className="p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto">
           <Outlet />
         </main>

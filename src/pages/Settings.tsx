@@ -1,11 +1,17 @@
-import { Building2, Plus, Trash2, MapPin, UploadCloud, FileType, CheckCircle2, ShieldCheck, History, Landmark, Edit2, Check, X as CloseIcon } from 'lucide-react';
+import { Building2, Plus, Trash2, MapPin, UploadCloud, FileType, CheckCircle2, ShieldCheck, History, Landmark, Edit2, Check, Lock, Unlock, Mail, User as UserIcon, ShieldAlert, X as CloseIcon } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
-import { useData } from '../context/DataContext';
+import { useData, User } from '../context/DataContext';
 import { useState, ChangeEvent } from 'react';
 
 export default function Settings() {
-  const { cities, clients, addCity, removeCity, updateCity, addClient, removeClient, updateClient, importBulkData } = useData();
+  const { 
+    cities, clients, addCity, removeCity, updateCity, 
+    addClient, removeClient, updateClient, 
+    importBulkData, users, addUser, removeUser, updateUser, 
+    currentUser, resetMPForClient, resetAllMP 
+  } = useData();
+  
   const [newCity, setNewCity] = useState('');
   const [newClient, setNewClient] = useState('');
   
@@ -17,7 +23,33 @@ export default function Settings() {
 
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [resetClient, setResetClient] = useState('');
-  const { resetMPForClient, resetAllMP } = useData();
+
+  const [isAdminManual, setIsAdminManual] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+
+  // Unlocked if manual admin check passed OR if current session user is an admin
+  const isUnlocked = isAdminManual || currentUser?.role === 'admin';
+
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserRole, setNewUserRole] = useState<'admin' | 'user'>('user');
+
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [showGlobalResetConfirm, setShowGlobalResetConfirm] = useState(false);
+
+  const { clearAllData } = useData();
+
+  const handleAdminLogin = () => {
+    const correctPassword = (import.meta as any).env.VITE_ADMIN_CODE || '1234';
+    if (adminPassword === correctPassword) {
+      setIsAdminManual(true);
+      setShowAdminLogin(false);
+      setAdminPassword('');
+    } else {
+      alert("Code administrateur incorrect.");
+    }
+  };
 
   const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -74,11 +106,69 @@ export default function Settings() {
 
   return (
     <div className="space-y-12 animate-slam-in">
-      <section>
-        <h3 className="text-4xl font-black text-on-surface tracking-tight">Paramètres</h3>
-        <p className="text-on-surface-variant mt-2 max-w-2xl text-lg leading-relaxed">
-          Gérez les paramètres structurels de votre flotte industrielle. Administrez vos villes, clients et agences avec précision.
-        </p>
+      <section className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <h3 className="text-4xl font-black text-on-surface tracking-tight">Paramètres</h3>
+          <p className="text-on-surface-variant mt-2 max-w-2xl text-lg leading-relaxed">
+            Gérez les paramètres structurels de votre flotte industrielle. Administrez vos villes, clients et agences avec précision.
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          {isUnlocked ? (
+            <div className="flex items-center gap-3 bg-success/10 border border-success/20 px-4 py-2 rounded-full">
+              <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+              <span className="text-xs font-black text-success uppercase tracking-widest">
+                {currentUser?.role === 'admin' ? "Session Admin Active" : "Accès Admin Manuel"}
+              </span>
+              {isAdminManual && (
+                <button 
+                  onClick={() => setIsAdminManual(false)}
+                  className="p-1 hover:bg-success/20 rounded-full text-success transition-colors"
+                  title="Couper l'accès manuel"
+                >
+                  <Unlock size={16} />
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              {showAdminLogin ? (
+                <div className="flex items-center gap-2 bg-white border border-surface-container p-1 rounded-lg animate-in slide-in-from-right-4">
+                  <input 
+                    type="password"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin()}
+                    placeholder="Code Admin..."
+                    className="bg-transparent border-none focus:ring-0 text-xs w-24 px-2"
+                    autoFocus
+                  />
+                  <button 
+                    onClick={handleAdminLogin}
+                    className="bg-primary text-white p-1.5 rounded-md hover:bg-primary-hover"
+                  >
+                    <Check size={14} />
+                  </button>
+                  <button 
+                    onClick={() => setShowAdminLogin(false)}
+                    className="p-1.5 text-on-surface-variant hover:text-error"
+                  >
+                    <CloseIcon size={14} />
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => setShowAdminLogin(true)}
+                  className="flex items-center gap-2 bg-on-surface/5 hover:bg-on-surface/10 px-4 py-2 rounded-full text-on-surface-variant transition-all group"
+                >
+                  <Lock size={14} className="group-hover:scale-110 transition-transform" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface">Connexion Admin</span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -232,8 +322,165 @@ export default function Settings() {
             </div>
           </div>
 
+          {/* User Management */}
+          <div className="bg-white p-8 rounded-xl border border-surface-container shadow-sm space-y-8 relative overflow-hidden">
+            {!isUnlocked && (
+              <div className="absolute inset-0 bg-surface/40 backdrop-blur-[2px] z-10 flex items-center justify-center group pointer-events-none">
+                <div className="bg-white/90 p-4 rounded-xl shadow-xl border border-surface-container flex flex-col items-center gap-2 transform group-hover:scale-105 transition-transform">
+                  <Lock className="text-on-surface-variant/40" size={32} />
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Accès Réservé Administrateur</p>
+                </div>
+              </div>
+            )}
+            <div className="flex items-center gap-3 border-b border-surface-container pb-4">
+              <UserIcon className="text-primary" size={24} />
+              <h4 className="text-xl font-bold text-primary">Gestion des Utilisateurs</h4>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-surface-container-low p-6 rounded-xl border border-surface-container">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant ml-1">Nom Complet</label>
+                <input 
+                  type="text"
+                  value={newUserName}
+                  onChange={(e) => setNewUserName(e.target.value)}
+                  placeholder="Jean Dupont"
+                  className="w-full bg-white border border-surface-container p-2 rounded-lg text-sm focus:border-primary focus:ring-0"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant ml-1">Email</label>
+                <input 
+                  type="email"
+                  value={newUserEmail}
+                  onChange={(e) => setNewUserEmail(e.target.value)}
+                  placeholder="jean@ncr-maroc.com"
+                  className="w-full bg-white border border-surface-container p-2 rounded-lg text-sm focus:border-primary focus:ring-0"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant ml-1">Rôle</label>
+                <div className="flex gap-2">
+                  <select 
+                    value={newUserRole}
+                    onChange={(e) => setNewUserRole(e.target.value as 'admin' | 'user')}
+                    className="flex-grow bg-white border border-surface-container p-2 rounded-lg text-sm focus:border-primary focus:ring-0"
+                  >
+                    <option value="user">Agent (Standard)</option>
+                    <option value="admin">Administrateur</option>
+                  </select>
+                  <button 
+                    onClick={() => {
+                      if(!newUserName || !newUserEmail) return;
+                      if(!newUserEmail.toLowerCase().endsWith('@ncr-maroc.com')) {
+                        alert("L'email doit impérativement se terminer par @ncr-maroc.com");
+                        return;
+                      }
+                      addUser({
+                        id: `USR-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+                        name: newUserName,
+                        email: newUserEmail,
+                        role: newUserRole,
+                        createdAt: new Date().toISOString()
+                      });
+                      setNewUserName('');
+                      setNewUserEmail('');
+                    }}
+                    className="bg-primary text-white p-2 rounded-lg hover:bg-primary-hover shadow-sm transition-transform active:scale-95"
+                  >
+                    <Plus size={20} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {users.map((user) => (
+                <div key={user.id} className="flex items-center justify-between p-4 bg-white border border-surface-container rounded-xl group hover:shadow-md transition-all">
+                  <div className="flex items-center gap-4">
+                    <div className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center font-black text-xs",
+                      user.role === 'admin' ? "bg-primary text-white shadow-lg" : "bg-surface-container text-on-surface-variant"
+                    )}>
+                      {user.name.charAt(0)}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-on-surface">{user.name}</span>
+                        {user.role === 'admin' && (
+                          <span className="text-[8px] font-black bg-primary/10 text-primary px-1.5 py-0.5 rounded uppercase tracking-widest flex items-center gap-1">
+                            <ShieldAlert size={10} /> Admin
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 mt-0.5">
+                        <span className="text-[10px] text-on-surface-variant flex items-center gap-1">
+                          <Mail size={10} /> {user.email}
+                        </span>
+                        <span className="text-[10px] text-on-surface-variant font-mono">
+                          ID: {user.id}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {deletingUserId === user.id ? (
+                      <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2">
+                        <button 
+                          onClick={() => {
+                            removeUser(user.id);
+                            setDeletingUserId(null);
+                          }}
+                          className="text-[10px] font-black uppercase tracking-widest bg-error text-white px-3 py-1.5 rounded-lg shadow-sm"
+                        >
+                          Confirmer
+                        </button>
+                        <button 
+                          onClick={() => setDeletingUserId(null)}
+                          className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-surface-container hover:bg-surface-container"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <button 
+                          onClick={() => updateUser(user.id, { role: user.role === 'admin' ? 'user' : 'admin' })}
+                          className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-surface-container hover:bg-primary hover:text-white hover:border-primary transition-all"
+                        >
+                          {user.role === 'admin' ? "Rétrograder" : "Promouvoir"}
+                        </button>
+                        <button 
+                          onClick={() => {
+                            if (user.id === currentUser?.id) {
+                              alert("Vous ne pouvez pas supprimer votre propre compte.");
+                              return;
+                            }
+                            setDeletingUserId(user.id);
+                          }}
+                          className="p-2 text-on-surface-variant hover:text-error transition-colors"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Maintenance (MP) Operations */}
-          <div className="bg-white p-8 rounded-xl border border-surface-container shadow-sm space-y-8">
+          <div className="bg-white p-8 rounded-xl border border-surface-container shadow-sm space-y-8 relative overflow-hidden">
+            {!isUnlocked && (
+              <div className="absolute inset-0 bg-surface/40 backdrop-blur-[2px] z-10 flex items-center justify-center group pointer-events-none">
+                <div className="bg-white/90 p-4 rounded-xl shadow-xl border border-surface-container flex flex-col items-center gap-2 transform group-hover:scale-105 transition-transform">
+                  <Lock className="text-on-surface-variant/40" size={32} />
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Accès Réservé Administrateur</p>
+                </div>
+              </div>
+            )}
             <div className="flex items-center gap-3 border-b border-surface-container pb-4">
               <History className="text-primary" size={24} />
               <h4 className="text-xl font-bold text-primary">Gestion de la Maintenance (MP)</h4>
@@ -292,7 +539,15 @@ export default function Settings() {
 
         {/* Data Import Footer Section (Full Width Now) */}
         <div className="lg:col-span-12">
-          <div className="bg-white p-8 rounded-xl border border-surface-container shadow-sm flex flex-col md:flex-row gap-8 items-center">
+          <div className="bg-white p-8 rounded-xl border border-surface-container shadow-sm flex flex-col md:flex-row gap-8 items-center relative overflow-hidden">
+            {!isUnlocked && (
+              <div className="absolute inset-0 bg-surface/40 backdrop-blur-[1px] z-10 flex items-center justify-center pointer-events-none">
+                <div className="bg-white/80 px-4 py-2 rounded-full border border-surface-container flex items-center gap-2">
+                  <Lock size={12} className="text-on-surface-variant" />
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface-variant">Import restreint</span>
+                </div>
+              </div>
+            )}
             <div className="md:w-1/3 space-y-4">
               <div className="flex items-center gap-3">
                 <UploadCloud className="text-primary" size={24} />
@@ -305,8 +560,11 @@ export default function Settings() {
             </div>
 
             <div 
-              className="flex-grow w-full border-2 border-dashed border-surface-container rounded-xl p-8 bg-surface-container-low text-center hover:bg-surface-container transition-colors cursor-pointer group flex flex-col items-center relative"
-              onClick={() => document.getElementById('csv-import')?.click()}
+              className={cn(
+                "flex-grow w-full border-2 border-dashed border-surface-container rounded-xl p-8 bg-surface-container-low text-center hover:bg-surface-container transition-colors group flex flex-col items-center relative",
+                isUnlocked ? "cursor-pointer" : "cursor-not-allowed opacity-50"
+              )}
+              onClick={() => isUnlocked && document.getElementById('csv-import')?.click()}
             >
               <input 
                 id="csv-import"
@@ -341,17 +599,35 @@ export default function Settings() {
           <span className="flex items-center gap-1 uppercase tracking-wider font-bold">
             <History size={14} /> System v2.4.0
           </span>
-          <button 
-            onClick={() => {
-              if(confirm("Voulez-vous vraiment réinitialiser toutes les données ? Cette action est irréversible.")) {
-                localStorage.clear();
-                window.location.reload();
-              }
-            }}
-            className="flex items-center gap-1 uppercase tracking-wider font-bold text-error hover:underline"
-          >
-            Réinitialiser l'application
-          </button>
+          <div className="relative">
+            {showGlobalResetConfirm ? (
+              <div className="flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 bg-error/10 p-2 rounded-lg border border-error/20">
+                <span className="text-error font-black uppercase tracking-widest text-[9px]">Confirmer Reset Total ?</span>
+                <button 
+                  onClick={() => {
+                    clearAllData();
+                    window.location.reload();
+                  }}
+                  className="bg-error text-white px-3 py-1 rounded-md text-[9px] font-black uppercase"
+                >
+                  OUI, TOUT EFFACER
+                </button>
+                <button 
+                  onClick={() => setShowGlobalResetConfirm(false)}
+                  className="text-on-surface-variant hover:text-on-surface px-2 py-1 text-[9px] font-black uppercase"
+                >
+                  ANNULER
+                </button>
+              </div>
+            ) : (
+              <button 
+                onClick={() => setShowGlobalResetConfirm(true)}
+                className="flex items-center gap-1 uppercase tracking-wider font-bold text-error hover:underline transition-all"
+              >
+                Réinitialiser l'application & Utilisateurs
+              </button>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <CheckCircle2 size={14} className="text-tertiary" />
