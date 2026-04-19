@@ -24,6 +24,7 @@ export interface User {
   name: string;
   email: string;
   role: 'admin' | 'user';
+  password?: string;
   createdAt: string;
 }
 
@@ -45,12 +46,13 @@ interface DataContextType {
   addUser: (user: User) => void;
   removeUser: (id: string) => void;
   updateUser: (id: string, updates: Partial<User>) => void;
+  updatePassword: (userId: string, newPassword: string) => void;
   importBulkData: (newCities: string[], newClients: string[], newAgencies?: Agency[]) => void;
   clearAllData: () => void;
   toggleMP: (agencyId: string) => void;
   resetMPForClient: (clientName: string) => void;
   resetAllMP: () => void;
-  login: (email: string) => boolean;
+  login: (email: string, password?: string) => boolean;
   logout: () => void;
 }
 
@@ -112,8 +114,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       console.error("Failed to load users", e);
     }
     return [
-      { id: 'USR-001', name: 'Admin Principal', email: 'admin@ncr-maroc.com', role: 'admin', createdAt: new Date().toISOString() },
-      { id: 'USR-002', name: 'Agent Logistique', email: 'agent@ncr-maroc.com', role: 'user', createdAt: new Date().toISOString() },
+      { id: 'USR-001', name: 'Admin Principal', email: 'admin@ncr-maroc.com', role: 'admin', password: 'admin', createdAt: new Date().toISOString() },
+      { id: 'USR-002', name: 'Agent Logistique', email: 'agent@ncr-maroc.com', role: 'user', password: 'user', createdAt: new Date().toISOString() },
     ];
   });
 
@@ -184,8 +186,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       { id: 'HUB-MA-009', name: 'Marseille Port - Transit', city: 'Marseille', client: 'Industries Globales SAS', vehiclesCount: 30, sn: 'SN-MA-009' },
     ]);
     setUsers([
-      { id: 'USR-001', name: 'Admin Principal', email: 'admin@ncr-maroc.com', role: 'admin', createdAt: new Date().toISOString() },
-      { id: 'USR-002', name: 'Agent Logistique', email: 'agent@ncr-maroc.com', role: 'user', createdAt: new Date().toISOString() },
+      { id: 'USR-001', name: 'Admin Principal', email: 'admin@ncr-maroc.com', role: 'admin', password: 'admin', createdAt: new Date().toISOString() },
+      { id: 'USR-002', name: 'Agent Logistique', email: 'agent@ncr-maroc.com', role: 'user', password: 'user', createdAt: new Date().toISOString() },
     ]);
   };
 
@@ -271,11 +273,25 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const updateUser = (id: string, updates: Partial<User>) => {
     setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
+    if (currentUser?.id === id) {
+      setCurrentUser(prev => prev ? { ...prev, ...updates } : null);
+    }
   };
 
-  const login = (email: string) => {
+  const updatePassword = (userId: string, newPassword: string) => {
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, password: newPassword } : u));
+    if (currentUser?.id === userId) {
+      setCurrentUser(prev => prev ? { ...prev, password: newPassword } : null);
+    }
+  };
+
+  const login = (email: string, password?: string) => {
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     if (user) {
+      // If a password is provided (it will be passed from Login.tsx), verify it
+      if (password && user.password && user.password !== password) {
+        return false;
+      }
       setCurrentUser(user);
       return true;
     }
@@ -307,6 +323,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       addUser,
       removeUser,
       updateUser,
+      updatePassword,
       importBulkData,
       clearAllData,
       toggleMP,

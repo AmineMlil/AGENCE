@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import Fleet from './pages/Fleet';
 import AddMachine from './pages/AddMachine';
 import Settings from './pages/Settings';
+import Profile from './pages/Profile';
 import AgencyDetails from './pages/AgencyDetails';
 import Layout from './components/Layout';
 import { useData } from './context/DataContext';
@@ -26,6 +27,7 @@ export default function App() {
             <Route path="/agency/:id" element={<AgencyDetails />} />
             <Route path="/add-machine" element={<AddMachine />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Route>

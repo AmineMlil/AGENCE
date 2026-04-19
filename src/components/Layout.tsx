@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Truck, Building2, Settings, Menu, User, LogOut } from 'lucide-react';
+import { LayoutDashboard, CreditCard, Building2, Settings, Menu, User, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useState } from 'react';
@@ -11,7 +11,8 @@ const Sidebar = ({ isExpanded, setIsExpanded }: { isExpanded: boolean, setIsExpa
 
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-    { icon: Truck, label: 'Liste des agences', path: '/fleet' },
+    { icon: CreditCard, label: 'Liste des agences', path: '/fleet' },
+    { icon: User, label: 'Mon Profil', path: '/profile' },
     { icon: Settings, label: 'Paramètres', path: '/settings' },
   ];
 
@@ -90,9 +91,12 @@ const Sidebar = ({ isExpanded, setIsExpanded }: { isExpanded: boolean, setIsExpa
         </button>
       </nav>
 
-      <div className="mt-auto pt-6 border-t border-slate-200/10 flex items-center gap-4 px-4 pb-4 overflow-hidden">
+      <Link 
+        to="/profile"
+        className="mt-auto pt-6 border-t border-slate-200/10 flex items-center gap-4 px-4 pb-4 overflow-hidden hover:bg-white/5 transition-colors cursor-pointer group"
+      >
         <div className={cn(
-          "w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-black text-xs text-white shadow-lg",
+          "w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-black text-xs text-white shadow-lg group-hover:scale-110 transition-transform",
           currentUser?.role === 'admin' ? "bg-primary" : "bg-secondary"
         )}>
           {currentUser?.name.charAt(0)}
@@ -103,11 +107,11 @@ const Sidebar = ({ isExpanded, setIsExpanded }: { isExpanded: boolean, setIsExpa
             animate={{ opacity: 1 }}
             className="flex flex-col whitespace-nowrap overflow-hidden"
           >
-            <span className="font-semibold text-sm text-primary dark:text-blue-100 truncate w-32">{currentUser?.name}</span>
+            <span className="font-semibold text-sm text-primary dark:text-blue-100 truncate w-32 group-hover:underline">{currentUser?.name}</span>
             <span className="text-[10px] text-slate-500 uppercase tracking-widest">{currentUser?.role === 'admin' ? 'Administrateur' : 'Agent'}</span>
           </motion.div>
         )}
-      </div>
+      </Link>
     </aside>
   );
 };

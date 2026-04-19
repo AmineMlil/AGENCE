@@ -15,7 +15,7 @@ export default function Login() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (login(email)) {
+    if (login(email, password)) {
       navigate('/dashboard');
     } else {
       setError(true);
