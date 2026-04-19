@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme {
+  --font-inter: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  
+  --color-primary: #2563eb;
+  --color-primary-container: #eff6ff;
+  --color-on-primary: #ffffff;
+  
+  --color-secondary: #4b5563;
+  --color-on-secondary: #ffffff;
+  
+  --color-tertiary: #10b981;
+  
+  --color-surface: #f9fafb;
+  --color-sidebar-bg: #ffffff;
+  --color-on-surface: #111827;
+  --color-on-surface-variant: #6b7280;
+  
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f3f4f6;
+  --color-surface-container: #e5e7eb;
+  --color-surface-container-high: #d1d5db;
+  --color-surface-container-highest: #9ca3af;
+  
+  --color-outline: #9ca3af;
+  --color-outline-variant: #e5e7eb;
+  
+  --color-error: #ef4444;
+  --color-error-container: #fee2e2;
+
+  --animate-slam-in: slamIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+  body {
+    @apply font-inter bg-surface text-on-surface;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@keyframes slamIn {
+  0% { transform: scale(2) translateY(-100px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.glass-overlay {
+  background: rgba(17, 92, 185, 0.05);
+  backdrop-filter: blur(20px);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

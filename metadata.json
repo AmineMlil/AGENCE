@@ -1,0 +1,6 @@
+{
+  "name": "NCRM",
+  "description": "Système de gestion technique et d'intelligence industrielle pour le monitoring et l'enregistrement d'équipements haute performance.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": []
+}
