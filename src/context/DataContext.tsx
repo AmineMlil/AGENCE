@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 export interface Agency {
   id: string;
@@ -37,26 +37,49 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
-  const [cities, setCities] = useState<string[]>(['Paris', 'Lyon', 'Marseille', 'Bordeaux']);
-  const [clients, setClients] = useState<string[]>(['Industries Globales SAS', 'Logistique Avancée S.A.', 'Vector Manufacturing']);
-  const [agencies, setAgencies] = useState<Agency[]>([
-    { 
-      id: 'HUB-LY-001', 
-      name: 'Lyon Nord - Distribution', 
-      city: 'Lyon', 
-      client: 'Industries Globales SAS', 
-      vehiclesCount: 42, 
-      sn: 'SN-LY-001', 
-      tid: 'TID-4422',
-      ipAddress: '192.168.1.10',
-      computerName: 'NCRM-REMOTE-01',
-      remotePort: '8080',
-      remoteAddress: 'remote.ncrm.io'
-    },
-    { id: 'DEP-BX-012', name: 'Bordeaux Sud - Maintenance', city: 'Bordeaux', client: 'Logistique Avancée S.A.', vehiclesCount: 18, sn: 'SN-BX-012' },
-    { id: 'LOG-PA-045', name: 'Paris Est - Logistique', city: 'Paris', client: 'Vector Manufacturing', vehiclesCount: 55, sn: 'SN-PA-045' },
-    { id: 'HUB-MA-009', name: 'Marseille Port - Transit', city: 'Marseille', client: 'Industries Globales SAS', vehiclesCount: 30, sn: 'SN-MA-009' },
-  ]);
+  const [cities, setCities] = useState<string[]>(() => {
+    const saved = localStorage.getItem('ncrm_cities');
+    return saved ? JSON.parse(saved) : ['Paris', 'Lyon', 'Marseille', 'Bordeaux'];
+  });
+
+  const [clients, setClients] = useState<string[]>(() => {
+    const saved = localStorage.getItem('ncrm_clients');
+    return saved ? JSON.parse(saved) : ['Industries Globales SAS', 'Logistique Avancée S.A.', 'Vector Manufacturing'];
+  });
+
+  const [agencies, setAgencies] = useState<Agency[]>(() => {
+    const saved = localStorage.getItem('ncrm_agencies');
+    return saved ? JSON.parse(saved) : [
+      { 
+        id: 'HUB-LY-001', 
+        name: 'Lyon Nord - Distribution', 
+        city: 'Lyon', 
+        client: 'Industries Globales SAS', 
+        vehiclesCount: 42, 
+        sn: 'SN-LY-001', 
+        tid: 'TID-4422',
+        ipAddress: '192.168.1.10',
+        computerName: 'NCRM-REMOTE-01',
+        remotePort: '8080',
+        remoteAddress: 'remote.ncrm.io'
+      },
+      { id: 'DEP-BX-012', name: 'Bordeaux Sud - Maintenance', city: 'Bordeaux', client: 'Logistique Avancée S.A.', vehiclesCount: 18, sn: 'SN-BX-012' },
+      { id: 'LOG-PA-045', name: 'Paris Est - Logistique', city: 'Paris', client: 'Vector Manufacturing', vehiclesCount: 55, sn: 'SN-PA-045' },
+      { id: 'HUB-MA-009', name: 'Marseille Port - Transit', city: 'Marseille', client: 'Industries Globales SAS', vehiclesCount: 30, sn: 'SN-MA-009' },
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('ncrm_cities', JSON.stringify(cities));
+  }, [cities]);
+
+  useEffect(() => {
+    localStorage.setItem('ncrm_clients', JSON.stringify(clients));
+  }, [clients]);
+
+  useEffect(() => {
+    localStorage.setItem('ncrm_agencies', JSON.stringify(agencies));
+  }, [agencies]);
 
   const addCity = (city: string) => {
     if (city && !cities.includes(city)) {
