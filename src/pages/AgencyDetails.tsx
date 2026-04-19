@@ -163,16 +163,16 @@ export default function AgencyDetails() {
         </div>
       </div>
 
-      <div className="flex justify-end gap-4 pt-10 border-t border-surface-container">
+      <div className="flex flex-col sm:flex-row justify-end gap-4 pt-10 border-t border-surface-container">
         <button 
           onClick={() => navigate(-1)}
-          className="px-10 py-4 bg-surface-container-highest text-primary font-bold rounded-xl hover:bg-surface-variant transition-colors uppercase text-xs tracking-widest"
+          className="w-full sm:w-auto px-10 py-4 bg-surface-container-highest text-primary font-bold rounded-xl hover:bg-surface-variant transition-colors uppercase text-xs tracking-widest"
         >
           Annuler
         </button>
         <button 
           onClick={handleSave}
-          className="px-12 py-4 bg-primary text-on-primary font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all uppercase text-xs tracking-widest flex items-center justify-center gap-2"
+          className="w-full sm:w-auto px-12 py-4 bg-primary text-on-primary font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all uppercase text-xs tracking-widest flex items-center justify-center gap-2"
         >
           <Save size={18} />
           Mettre à jour les paramètres

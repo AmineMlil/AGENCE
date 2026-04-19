@@ -163,17 +163,17 @@ export default function Fleet() {
       </div>
 
       {/* Visual Identity Section */}
-      <section className="relative h-60 rounded-2xl overflow-hidden group shadow-xl">
+      <section className="relative h-48 sm:h-60 rounded-2xl overflow-hidden group shadow-xl">
         <img 
           src="https://lh3.googleusercontent.com/aida-public/AB6AXuDpcZmzhdNUiw3BzEPeDdxbxjE3nbnj-g4tsCltOn0D5YykyeuoheYmL7LGJbtuFfwabvG9cnxcTxxCf6v-Tz_z6Z-qbZDyhN4wrDqlOGAaXlVCP7kUrBvC3HsIcLXTwWQwiVBtD8rdfEyw1eDJEYYaSV2dhb8HXedbWKyBj0TWUCqwW03h5yExUw-noUppbMHtyc1RrUJC9s1tM-49NaDzAOftgAnEgWXku5qcwc1RPNur20YAO7q9sQDkdbmicGbT9SgwBinNSyo"
           alt="Fleet Illustration"
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
           referrerPolicy="no-referrer"
         />
-        <div className="absolute inset-0 bg-primary/60 backdrop-blur-[2px] flex items-center p-10">
+        <div className="absolute inset-0 bg-primary/60 backdrop-blur-[2px] flex items-center p-6 sm:p-10">
           <div className="max-w-md">
-            <h4 className="text-white text-3xl font-black tracking-tighter mb-4 uppercase">NCRM</h4>
-            <p className="text-blue-100/80 text-sm leading-relaxed font-medium">
+            <h4 className="text-white text-2xl sm:text-3xl font-black tracking-tighter mb-2 sm:mb-4 uppercase">NCRM</h4>
+            <p className="text-blue-100/80 text-xs sm:text-sm leading-relaxed font-medium">
               la liste des agences a porté de main
             </p>
           </div>

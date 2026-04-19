@@ -2,7 +2,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, CreditCard, Building2, Settings, Menu, User, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 
 const Sidebar = ({ isExpanded, setIsExpanded }: { isExpanded: boolean, setIsExpanded: (v: boolean) => void }) => {
@@ -17,14 +17,28 @@ const Sidebar = ({ isExpanded, setIsExpanded }: { isExpanded: boolean, setIsExpa
   ];
 
   return (
-    <aside 
-      onMouseEnter={() => setIsExpanded(true)}
-      onMouseLeave={() => setIsExpanded(false)}
-      className={cn(
-        "fixed left-0 top-0 h-screen bg-sidebar-bg dark:bg-slate-950 flex flex-col gap-1 p-4 border-r border-surface-container transition-all duration-300 z-[60]",
-        isExpanded ? "w-60" : "w-20"
-      )}
-    >
+    <>
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsExpanded(false)}
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[55] lg:hidden"
+          />
+        )}
+      </AnimatePresence>
+      <aside 
+        onMouseEnter={() => setIsExpanded(true)}
+        onMouseLeave={() => setIsExpanded(false)}
+        className={cn(
+          "fixed left-0 top-0 h-screen bg-sidebar-bg dark:bg-slate-950 flex flex-col gap-1 p-4 border-r border-surface-container transition-all duration-300 z-[60]",
+          "lg:translate-x-0",
+          !isExpanded && "-translate-x-full lg:translate-x-0",
+          isExpanded ? "w-60 translate-x-0" : "w-20"
+        )}
+      >
       <Link to="/dashboard" className="mb-8 px-4 py-2 block">
         <h1 className={cn(
           "text-primary dark:text-blue-100 font-black text-2xl tracking-tighter transition-opacity duration-300",
@@ -113,19 +127,20 @@ const Sidebar = ({ isExpanded, setIsExpanded }: { isExpanded: boolean, setIsExpa
         )}
       </Link>
     </aside>
+    </>
   );
 };
 
 const TopBar = ({ onMenuClick }: { onMenuClick: () => void }) => {
   const { currentUser } = useData();
   return (
-    <header className="bg-white dark:bg-slate-900 flex justify-between items-center px-8 h-20 w-full sticky top-0 z-50 border-b border-surface-container ml-0 lg:ml-0">
-      <div className="flex items-center gap-4">
+    <header className="bg-white dark:bg-slate-900 flex justify-between items-center px-4 sm:px-8 h-20 w-full sticky top-0 z-50 border-b border-surface-container shrink-0">
+      <div className="flex items-center gap-2 sm:gap-4">
         <button 
           onClick={onMenuClick}
-          className="text-primary dark:text-blue-400 p-2 hover:bg-surface-container rounded-lg transition-colors active:scale-90"
+          className="text-primary dark:text-blue-400 p-3 hover:bg-surface-container rounded-lg transition-colors active:scale-90 min-w-[44px] min-h-[44px] flex items-center justify-center"
         >
-          <Menu size={20} />
+          <Menu size={24} />
         </button>
         <Link to="/dashboard" className="transition-transform active:scale-95">
           <h2 className="text-primary dark:text-blue-100 font-bold tracking-tighter text-lg uppercase hidden sm:block">
@@ -147,13 +162,19 @@ const TopBar = ({ onMenuClick }: { onMenuClick: () => void }) => {
 
 export default function Layout() {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+  const location = useLocation();
+
+  // Close sidebar on mobile when navigating
+  useEffect(() => {
+    setIsSidebarExpanded(false);
+  }, [location.pathname]);
 
   return (
     <div className="flex min-h-screen">
       <Sidebar isExpanded={isSidebarExpanded} setIsExpanded={setIsSidebarExpanded} />
-      <div className="flex-grow lg:pl-20 transition-all duration-300">
+      <div className="flex-grow lg:pl-20 transition-all duration-300 w-full min-w-0">
         <TopBar onMenuClick={() => setIsSidebarExpanded(!isSidebarExpanded)} />
-        <main className="p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto">
+        <main className="p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto w-full">
           <Outlet />
         </main>
       </div>

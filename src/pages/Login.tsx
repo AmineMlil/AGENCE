@@ -25,14 +25,14 @@ export default function Login() {
 
   return (
     <div className="bg-surface min-h-screen flex flex-col">
-      <header className="w-full flex justify-center pt-12 pb-8">
+      <header className="w-full flex justify-center pt-8 sm:pt-12 pb-4 sm:pb-8">
         <div className="flex flex-col items-center gap-4">
           <motion.div 
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="p-3 bg-surface-container-highest rounded-xl shadow-lg border border-outline-variant/10"
+            className="p-2 sm:p-3 bg-surface-container-highest rounded-xl shadow-lg border border-outline-variant/10"
           >
-            <div className="bg-primary p-4 rounded-lg text-white font-black text-2xl flex items-center justify-center">
+            <div className="bg-primary p-3 sm:p-4 rounded-lg text-white font-black text-xl sm:text-2xl flex items-center justify-center">
               NCRM
             </div>
           </motion.div>

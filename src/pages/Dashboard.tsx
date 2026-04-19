@@ -23,25 +23,25 @@ export default function Dashboard() {
   return (
     <div className="space-y-12">
       {/* Editorial Header Section */}
-      <section className="animate-slam-in bg-white p-8 rounded-2xl border border-surface-container shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
-        <Link to="/profile" className="flex items-center gap-6 group">
+      <section className="animate-slam-in bg-white p-6 sm:p-8 rounded-2xl border border-surface-container shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
+        <Link to="/profile" className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 group text-center sm:text-left">
           <div className={cn(
-            "h-20 px-8 rounded-2xl flex items-center justify-center text-xl font-black text-white shadow-xl rotate-3 group-hover:rotate-0 transition-transform duration-500 whitespace-nowrap",
+            "h-16 sm:h-20 px-6 sm:px-8 rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-xl font-black text-white shadow-xl rotate-3 group-hover:rotate-0 transition-transform duration-500 whitespace-nowrap",
             currentUser?.role === 'admin' ? "bg-primary" : "bg-secondary"
           )}>
             {currentUser?.name}
           </div>
           <div>
             <span className="text-primary font-bold tracking-[0.2em] text-[10px] uppercase mb-1 block group-hover:translate-x-1 transition-transform">Bonjour, {currentUser?.name}</span>
-            <h2 className="text-4xl font-black text-on-surface leading-tight tracking-tighter group-hover:translate-x-1 transition-transform">
+            <h2 className="text-3xl sm:text-4xl font-black text-on-surface leading-tight tracking-tighter group-hover:translate-x-1 transition-transform">
               NCRM 
-              <span className="block text-on-surface-variant font-medium text-lg tracking-normal mt-1">
+              <span className="block text-on-surface-variant font-medium text-base sm:text-lg tracking-normal mt-1">
                 La gestion simplifiée de votre flotte
               </span>
             </h2>
           </div>
         </Link>
-        <div className="flex flex-col items-end">
+        <div className="flex flex-col items-center md:items-end">
           <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-1">Rôle Actuel</span>
           <span className={cn(
             "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",

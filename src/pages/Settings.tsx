@@ -396,35 +396,35 @@ export default function Settings() {
 
             <div className="space-y-3">
               {users.map((user) => (
-                <div key={user.id} className="flex items-center justify-between p-4 bg-white border border-surface-container rounded-xl group hover:shadow-md transition-all">
+                <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white border border-surface-container rounded-xl group hover:shadow-md transition-all gap-4">
                   <div className="flex items-center gap-4">
                     <div className={cn(
-                      "w-10 h-10 rounded-full flex items-center justify-center font-black text-xs",
+                      "w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-black text-xs",
                       user.role === 'admin' ? "bg-primary text-white shadow-lg" : "bg-surface-container text-on-surface-variant"
                     )}>
                       {user.name.charAt(0)}
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-on-surface">{user.name}</span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-on-surface truncate">{user.name}</span>
                         {user.role === 'admin' && (
-                          <span className="text-[8px] font-black bg-primary/10 text-primary px-1.5 py-0.5 rounded uppercase tracking-widest flex items-center gap-1">
+                          <span className="text-[8px] font-black bg-primary/10 text-primary px-1.5 py-0.5 rounded uppercase tracking-widest flex items-center gap-1 shrink-0">
                             <ShieldAlert size={10} /> Admin
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 mt-0.5">
-                        <span className="text-[10px] text-on-surface-variant flex items-center gap-1">
-                          <Mail size={10} /> {user.email}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-0.5">
+                        <span className="text-[10px] text-on-surface-variant flex items-center gap-1 truncate">
+                          <Mail size={10} className="shrink-0" /> {user.email}
                         </span>
-                        <span className="text-[10px] text-on-surface-variant font-mono">
+                        <span className="text-[10px] text-on-surface-variant font-mono shrink-0">
                           ID: {user.id}
                         </span>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 justify-end sm:justify-start">
                     {deletingUserId === user.id ? (
                       <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2">
                         <button 
@@ -447,7 +447,7 @@ export default function Settings() {
                       <>
                         <button 
                           onClick={() => updateUser(user.id, { role: user.role === 'admin' ? 'user' : 'admin' })}
-                          className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-surface-container hover:bg-primary hover:text-white hover:border-primary transition-all"
+                          className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-surface-container hover:bg-primary hover:text-white hover:border-primary transition-all whitespace-nowrap"
                         >
                           {user.role === 'admin' ? "Rétrograder" : "Promouvoir"}
                         </button>
@@ -459,7 +459,7 @@ export default function Settings() {
                             }
                             setDeletingUserId(user.id);
                           }}
-                          className="p-2 text-on-surface-variant hover:text-error transition-colors"
+                          className="p-2 text-on-surface-variant hover:text-error transition-colors shrink-0"
                         >
                           <Trash2 size={18} />
                         </button>
@@ -487,8 +487,8 @@ export default function Settings() {
             </div>
             
             <div className="space-y-6">
-              <div className="flex flex-col md:flex-row items-end gap-6 bg-surface-container-low p-6 rounded-xl border border-surface-container">
-                <div className="flex-grow space-y-3">
+              <div className="flex flex-col sm:flex-row items-end gap-6 bg-surface-container-low p-4 sm:p-6 rounded-xl border border-surface-container">
+                <div className="w-full sm:flex-grow space-y-3 text-left">
                   <label className="text-xs font-bold tracking-wider text-secondary uppercase">Par Client (Ciblé)</label>
                   <select 
                     value={resetClient}
@@ -508,7 +508,7 @@ export default function Settings() {
                     }
                   }}
                   disabled={!resetClient}
-                  className="px-10 py-3 bg-secondary text-white font-bold rounded-lg shadow-sm hover:opacity-90 transition-all disabled:opacity-30 uppercase text-[10px] tracking-widest whitespace-nowrap"
+                  className="w-full sm:w-auto px-6 sm:px-10 py-3 bg-secondary text-white font-bold rounded-lg shadow-sm hover:opacity-90 transition-all disabled:opacity-30 uppercase text-[10px] tracking-widest whitespace-nowrap"
                 >
                   Réinitialiser le client
                 </button>
@@ -548,14 +548,14 @@ export default function Settings() {
                 </div>
               </div>
             )}
-            <div className="md:w-1/3 space-y-4">
-              <div className="flex items-center gap-3">
+            <div className="md:w-1/3 w-full space-y-4 text-center md:text-left">
+              <div className="flex items-center justify-center md:justify-start gap-3">
                 <UploadCloud className="text-primary" size={24} />
                 <h4 className="text-xl font-bold tracking-tight text-primary">Import de Données</h4>
               </div>
               <p className="text-on-surface-variant text-sm leading-relaxed">
                 Mettez à jour massivement votre base de données via CSV.
-                <span className="block mt-2 font-mono text-[10px] bg-surface-container-low p-2 rounded">Ville; Client; Agence; SN</span>
+                <span className="block mt-2 font-mono text-[10px] bg-surface-container-low p-2 rounded overflow-x-auto whitespace-nowrap">Ville; Client; Agence; SN</span>
               </p>
             </div>
 
