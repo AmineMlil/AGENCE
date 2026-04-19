@@ -282,6 +282,17 @@ export default function Settings() {
           <span className="flex items-center gap-1 uppercase tracking-wider font-bold">
             <History size={14} /> System v2.4.0
           </span>
+          <button 
+            onClick={() => {
+              if(confirm("Voulez-vous vraiment réinitialiser toutes les données ? Cette action est irréversible.")) {
+                localStorage.clear();
+                window.location.reload();
+              }
+            }}
+            className="flex items-center gap-1 uppercase tracking-wider font-bold text-error hover:underline"
+          >
+            Réinitialiser l'application
+          </button>
         </div>
         <div className="flex items-center gap-2">
           <CheckCircle2 size={14} className="text-tertiary" />

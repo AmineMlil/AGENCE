@@ -16,6 +16,14 @@ export default function Fleet() {
   };
 
   const filteredAgencies = useMemo(() => {
+    // If no specific city or client is chosen, return an empty list
+    const isCitySelected = activeFilters.city !== 'Toutes les Villes';
+    const isClientSelected = activeFilters.client !== 'Tous les Clients';
+
+    if (!isCitySelected || !isClientSelected) {
+      return [];
+    }
+
     return agencies.filter(agency => {
       const matchCity = activeFilters.city === 'Toutes les Villes' || agency.city === activeFilters.city;
       const matchClient = activeFilters.client === 'Tous les Clients' || agency.client === activeFilters.client;
@@ -75,8 +83,12 @@ export default function Fleet() {
       {/* Agency List */}
       <div className="space-y-3">
         {filteredAgencies.length === 0 ? (
-          <div className="text-center py-10 bg-surface-container-low rounded-xl border border-dashed border-surface-container">
-            <p className="text-on-surface-variant text-sm">Aucune agence ne correspond à ces critères.</p>
+          <div className="text-center py-16 bg-surface-container-low rounded-xl border border-dashed border-surface-container">
+            <p className="text-on-surface-variant text-sm font-medium">
+              {(activeFilters.city === 'Toutes les Villes' || activeFilters.client === 'Tous les Clients') 
+                ? "Veuillez sélectionner une ville et un client pour afficher les agences."
+                : "Aucune agence ne correspond à ces critères."}
+            </p>
           </div>
         ) : (
           filteredAgencies.map((agency, i) => (

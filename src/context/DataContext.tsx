@@ -32,24 +32,40 @@ interface DataContextType {
   updateAgency: (id: string, updates: Partial<Agency>) => void;
   removeAgency: (id: string) => void;
   importBulkData: (newCities: string[], newClients: string[], newAgencies?: Agency[]) => void;
+  clearAllData: () => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [cities, setCities] = useState<string[]>(() => {
-    const saved = localStorage.getItem('ncrm_cities');
-    return saved ? JSON.parse(saved) : ['Paris', 'Lyon', 'Marseille', 'Bordeaux'];
+    try {
+      const saved = localStorage.getItem('ncrm_cities');
+      return saved ? JSON.parse(saved) : ['Paris', 'Lyon', 'Marseille', 'Bordeaux'];
+    } catch (e) {
+      console.error("Failed to load cities", e);
+      return ['Paris', 'Lyon', 'Marseille', 'Bordeaux'];
+    }
   });
 
   const [clients, setClients] = useState<string[]>(() => {
-    const saved = localStorage.getItem('ncrm_clients');
-    return saved ? JSON.parse(saved) : ['Industries Globales SAS', 'Logistique Avancée S.A.', 'Vector Manufacturing'];
+    try {
+      const saved = localStorage.getItem('ncrm_clients');
+      return saved ? JSON.parse(saved) : ['Industries Globales SAS', 'Logistique Avancée S.A.', 'Vector Manufacturing'];
+    } catch (e) {
+      console.error("Failed to load clients", e);
+      return ['Industries Globales SAS', 'Logistique Avancée S.A.', 'Vector Manufacturing'];
+    }
   });
 
   const [agencies, setAgencies] = useState<Agency[]>(() => {
-    const saved = localStorage.getItem('ncrm_agencies');
-    return saved ? JSON.parse(saved) : [
+    try {
+      const saved = localStorage.getItem('ncrm_agencies');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error("Failed to load agencies", e);
+    }
+    return [
       { 
         id: 'HUB-LY-001', 
         name: 'Lyon Nord - Distribution', 
@@ -70,16 +86,42 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   });
 
   useEffect(() => {
-    localStorage.setItem('ncrm_cities', JSON.stringify(cities));
+    try {
+      localStorage.setItem('ncrm_cities', JSON.stringify(cities));
+    } catch (e) {
+      console.error("Failed to save cities", e);
+    }
   }, [cities]);
 
   useEffect(() => {
-    localStorage.setItem('ncrm_clients', JSON.stringify(clients));
+    try {
+      localStorage.setItem('ncrm_clients', JSON.stringify(clients));
+    } catch (e) {
+      console.error("Failed to save clients", e);
+    }
   }, [clients]);
 
   useEffect(() => {
-    localStorage.setItem('ncrm_agencies', JSON.stringify(agencies));
+    try {
+      localStorage.setItem('ncrm_agencies', JSON.stringify(agencies));
+    } catch (e) {
+      console.error("Failed to save agencies", e);
+    }
   }, [agencies]);
+
+  const clearAllData = () => {
+    localStorage.removeItem('ncrm_cities');
+    localStorage.removeItem('ncrm_clients');
+    localStorage.removeItem('ncrm_agencies');
+    setCities(['Paris', 'Lyon', 'Marseille', 'Bordeaux']);
+    setClients(['Industries Globales SAS', 'Logistique Avancée S.A.', 'Vector Manufacturing']);
+    setAgencies([
+      { id: 'HUB-LY-001', name: 'Lyon Nord - Distribution', city: 'Lyon', client: 'Industries Globales SAS', vehiclesCount: 42, sn: 'SN-LY-001' },
+      { id: 'DEP-BX-012', name: 'Bordeaux Sud - Maintenance', city: 'Bordeaux', client: 'Logistique Avancée S.A.', vehiclesCount: 18, sn: 'SN-BX-012' },
+      { id: 'LOG-PA-045', name: 'Paris Est - Logistique', city: 'Paris', client: 'Vector Manufacturing', vehiclesCount: 55, sn: 'SN-PA-045' },
+      { id: 'HUB-MA-009', name: 'Marseille Port - Transit', city: 'Marseille', client: 'Industries Globales SAS', vehiclesCount: 30, sn: 'SN-MA-009' },
+    ]);
+  };
 
   const addCity = (city: string) => {
     if (city && !cities.includes(city)) {
@@ -155,7 +197,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       addAgency,
       updateAgency,
       removeAgency,
-      importBulkData
+      importBulkData,
+      clearAllData
     }}>
       {children}
     </DataContext.Provider>
