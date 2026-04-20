@@ -138,16 +138,9 @@ export default function Dashboard() {
       {/* Footer Meta */}
       <footer className="pt-8 border-t border-surface-container-high flex flex-col sm:flex-row justify-between items-center text-on-surface-variant text-[10px] gap-4">
         <div className="flex gap-6">
-          <span className="flex items-center gap-1 uppercase tracking-wider font-bold">
-            <ShieldCheck size={14} className="text-tertiary" /> Connexion Sécurisée AES-256
+          <span className="text-[10px] uppercase tracking-wider font-bold">
+            © 2024 NCRM - PRECISION FLEET MANAGEMENT
           </span>
-          <span className="flex items-center gap-1 uppercase tracking-wider font-bold">
-            <History size={14} /> Dernier import : 12/05/2024
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-tertiary animate-pulse"></div>
-          <span className="font-bold uppercase tracking-wider">Tous les systèmes sont opérationnels</span>
         </div>
       </footer>
     </div>

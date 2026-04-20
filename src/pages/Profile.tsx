@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
-import { User, Key, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { User, Key, Save, AlertCircle, CheckCircle2, LogOut } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 
@@ -42,6 +42,11 @@ export default function Profile() {
     setConfirmPassword('');
   };
 
+  const handleLogout = () => {
+    const { logout } = useData();
+    logout();
+  };
+
   if (!currentUser) return null;
 
   return (
@@ -55,11 +60,16 @@ export default function Profile() {
         {/* Profile Info Card */}
         <section className="bg-white p-8 rounded-2xl border border-surface-container shadow-sm">
           <div className="flex items-center gap-6 mb-8">
-            <div className={cn(
-              "w-24 h-24 rounded-2xl flex items-center justify-center text-4xl font-black text-white shadow-xl",
-              currentUser.role === 'admin' ? "bg-primary" : "bg-secondary"
-            )}>
-              {currentUser.name}
+            <div className="w-24 h-24 rounded-2xl overflow-hidden shadow-xl bg-white border-2 border-primary/10">
+              <img 
+                src="/avatar-admin.png" 
+                alt="Avatar Administrateur"
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/avataaars/svg?seed=Admin&backgroundColor=b6e3f4`;
+                }}
+              />
             </div>
             <div>
               <h3 className="text-2xl font-bold text-primary tracking-tight">{currentUser.name}</h3>
@@ -154,13 +164,27 @@ export default function Profile() {
               </motion.div>
             )}
 
-            <button 
-              type="submit"
-              className="w-full bg-primary text-white font-bold py-4 rounded-xl shadow-lg flex items-center justify-center gap-3 hover:bg-primary/90 transition-all active:scale-[0.98] group"
-            >
-              <Save size={20} className="group-hover:rotate-12 transition-transform" />
-              <span className="uppercase tracking-[0.2em] text-xs">Mettre à jour le mot de passe</span>
-            </button>
+            <div className="flex flex-col gap-4">
+              <button 
+                type="submit"
+                className="w-full bg-primary text-white font-bold py-4 rounded-xl shadow-lg flex items-center justify-center gap-3 hover:bg-primary/90 transition-all active:scale-[0.98] group"
+              >
+                <Save size={20} className="group-hover:rotate-12 transition-transform" />
+                <span className="uppercase tracking-[0.2em] text-xs">Enregistrer</span>
+              </button>
+
+              <button 
+                type="button"
+                onClick={() => {
+                  const { logout } = useData();
+                  logout();
+                }}
+                className="w-full bg-error/5 text-error font-bold py-4 rounded-xl border border-error/20 flex items-center justify-center gap-3 hover:bg-error hover:text-white transition-all active:scale-[0.98] lg:hidden"
+              >
+                <LogOut size={20} />
+                <span className="uppercase tracking-[0.2em] text-xs">Déconnexion</span>
+              </button>
+            </div>
           </form>
         </section>
       </div>
