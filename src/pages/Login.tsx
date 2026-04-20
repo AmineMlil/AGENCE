@@ -11,15 +11,36 @@ export default function Login() {
   const [error, setError] = useState(false);
   
   const navigate = useNavigate();
-  const { login } = useData();
+  const { loginWithGoogle, login, currentUser } = useData();
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (login(email, password)) {
+  React.useEffect(() => {
+    if (currentUser) {
       navigate('/dashboard');
-    } else {
+    }
+  }, [currentUser, navigate]);
+
+  const handleGoogleLogin = async () => {
+    try {
+      await loginWithGoogle();
+    } catch (err) {
+      console.error(err);
       setError(true);
       setTimeout(() => setError(false), 3000);
+    }
+  };
+
+  const handleManualLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoggingIn(true);
+    try {
+      await login(email, password);
+    } catch (err) {
+      console.error(err);
+      setError(true);
+      setTimeout(() => setError(false), 3000);
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -52,7 +73,7 @@ export default function Login() {
             transition={{ delay: 0.2 }}
             className="bg-white p-8 rounded-xl shadow-sm border border-surface-container"
           >
-            <form onSubmit={handleLogin} className="space-y-6">
+            <form onSubmit={handleManualLogin} className="space-y-6">
               {error && (
                 <div className="p-3 bg-error/10 border border-error/20 rounded-lg flex items-center gap-2 text-error text-[11px] font-bold uppercase tracking-wider animate-shake">
                   <AlertCircle size={14} /> Identification échouée
@@ -96,13 +117,29 @@ export default function Login() {
                 </div>
               </div>
 
-              <div className="pt-4">
+              <div className="pt-4 space-y-4">
                 <button 
                   type="submit"
-                  className="w-full bg-primary text-on-primary font-bold py-4 rounded-lg flex items-center justify-center gap-2 shadow-sm hover:bg-primary-hover active:scale-95 transition-all"
+                  disabled={isLoggingIn}
+                  className="w-full bg-primary text-on-primary font-bold py-4 rounded-lg flex items-center justify-center gap-2 shadow-sm hover:bg-primary-hover active:scale-95 transition-all disabled:opacity-50"
                 >
-                  <span>Se connecter</span>
+                  <span>{isLoggingIn ? 'Connexion...' : 'Se connecter'}</span>
                   <ArrowRight size={18} />
+                </button>
+                
+                <div className="flex items-center gap-4 py-2">
+                  <div className="flex-grow h-px bg-surface-container"></div>
+                  <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest leading-none">ou</span>
+                  <div className="flex-grow h-px bg-surface-container"></div>
+                </div>
+
+                <button 
+                  type="button"
+                  onClick={loginWithGoogle}
+                  className="w-full bg-white text-on-surface font-bold py-4 rounded-lg flex items-center justify-center gap-3 border-2 border-surface-container hover:bg-surface-container/30 active:scale-95 transition-all"
+                >
+                  <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+                  <span>Continuer avec Google</span>
                 </button>
               </div>
 

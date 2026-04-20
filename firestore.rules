@@ -1,0 +1,108 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 3. Primitive Definition
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "amine.mlil23@gmail.com" ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // 2. Validation Blueprints
+    function isValidAgency(data) {
+      return data.name is string && data.name.size() <= 200 &&
+             data.city is string && data.city.size() <= 100 &&
+             data.client is string && data.client.size() <= 100 &&
+             (data.get('sn', '') is string && data.get('sn', '').size() <= 100) &&
+             (data.get('isMP', false) is bool) &&
+             (data.get('vehiclesCount', 0) is int) &&
+             data.keys().hasAll(['name', 'city', 'client']);
+    }
+
+    function isValidUser(data) {
+      return data.name is string && data.name.size() <= 100 &&
+             data.email is string && data.email.size() <= 100 &&
+             data.role in ['admin', 'user'] &&
+             data.keys().hasAll(['name', 'email', 'role']);
+    }
+
+    // 1. Mandatory Size Enforcements & Identity Integrity
+    match /agencies/{agencyId} {
+      allow list: if isSignedIn(); // Broad list allowed, but we rely on client-side filtered queries for UX
+      allow get: if isSignedIn() && isValidId(agencyId);
+      
+      allow create: if isSignedIn() && 
+                    isValidId(agencyId) && 
+                    isValidAgency(incoming()) && 
+                    incoming().keys().size() <= 20;
+
+      allow update: if isSignedIn() && 
+                    isValidId(agencyId) && 
+                    isValidAgency(incoming()) && (
+                      isAdmin() || (
+                        // Regular users can only toggle isMP and update some machine info
+                        incoming().diff(existing()).affectedKeys().hasOnly(['isMP', 'sn', 'tid', 'gps', 'updatedAt', 'updatedBy']) &&
+                        incoming().name == existing().name &&
+                        incoming().client == existing().client &&
+                        incoming().city == existing().city
+                      )
+                    );
+      
+      allow delete: if isAdmin();
+    }
+
+    match /users/{userId} {
+      // 6. PII Isolation & Schema Constraints
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      
+      allow create: if isSignedIn() && 
+                    isOwner(userId) && 
+                    isValidUser(incoming()) &&
+                    incoming().role == 'user'; // Users cannot self-promote to admin
+      
+      allow update: if isSignedIn() && 
+                    isValidId(userId) && (
+                      (isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['name']) && incoming().role == existing().role) ||
+                      isAdmin()
+                    );
+    }
+
+    match /metadata/{configId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    
+    // Explicitly allow bootstrapping the first admin doc if it doesn't exist
+    match /admins/{adminId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+  }
+}

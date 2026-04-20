@@ -17,14 +17,6 @@ export default function Fleet() {
   };
 
   const filteredAgencies = useMemo(() => {
-    // If no specific city or client is chosen, return an empty list
-    const isCitySelected = activeFilters.city !== 'Toutes les Villes';
-    const isClientSelected = activeFilters.client !== 'Tous les Clients';
-
-    if (!isCitySelected || !isClientSelected) {
-      return [];
-    }
-
     return agencies.filter(agency => {
       const matchCity = activeFilters.city === 'Toutes les Villes' || agency.city === activeFilters.city;
       const matchClient = activeFilters.client === 'Tous les Clients' || agency.client === activeFilters.client;
@@ -127,6 +119,14 @@ export default function Fleet() {
                   )}>
                     {agency.id}
                   </span>
+                  {agency.sn && (
+                    <span className={cn(
+                      "text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded border",
+                      agency.isMP ? "border-white/30 text-white" : "border-surface-container text-primary"
+                    )}>
+                      SN: {agency.sn}
+                    </span>
+                  )}
                   <span className={cn(
                     "text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded",
                     agency.isMP ? "bg-white/20 text-white" : "bg-secondary/5 text-secondary"

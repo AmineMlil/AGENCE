@@ -1,4 +1,26 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { 
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  onSnapshot, 
+  updateDoc, 
+  deleteDoc, 
+  writeBatch,
+  query,
+  getDocs,
+  getDocFromServer
+} from 'firebase/firestore';
+import { 
+  onAuthStateChanged, 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  signOut,
+  signInWithEmailAndPassword,
+  User as FirebaseUser
+} from 'firebase/auth';
+import { db, auth } from '../lib/firebase';
 
 export interface Agency {
   id: string;
@@ -17,6 +39,8 @@ export interface Agency {
   remotePort?: string;
   remoteAddress?: string;
   isMP?: boolean;
+  updatedAt?: string;
+  updatedBy?: string;
 }
 
 export interface User {
@@ -28,310 +52,370 @@ export interface User {
   createdAt: string;
 }
 
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: 'create' | 'update' | 'delete' | 'list' | 'get' | 'write';
+  path: string | null;
+  authInfo: {
+    userId: string;
+    email: string;
+    emailVerified: boolean;
+    isAnonymous: boolean;
+    providerInfo: { providerId: string; displayName: string; email: string; }[] | any;
+  }
+}
+
+const handleFirestoreError = (error: any, operationType: FirestoreErrorInfo['operationType'], path: string | null = null) => {
+  if (error.code === 'permission-denied') {
+    const errorInfo: FirestoreErrorInfo = {
+      error: error.message,
+      operationType,
+      path,
+      authInfo: {
+        userId: auth.currentUser?.uid || 'anonymous',
+        email: auth.currentUser?.email || '',
+        emailVerified: auth.currentUser?.emailVerified || false,
+        isAnonymous: auth.currentUser?.isAnonymous || true,
+        providerInfo: auth.currentUser?.providerData.map(p => ({
+          providerId: p.providerId,
+          displayName: p.displayName,
+          email: p.email
+        }))
+      }
+    };
+    throw new Error(JSON.stringify(errorInfo));
+  }
+  throw error;
+};
+
 interface DataContextType {
   cities: string[];
   clients: string[];
   agencies: Agency[];
   users: User[];
   currentUser: User | null;
-  addCity: (city: string) => void;
-  removeCity: (city: string) => void;
-  updateCity: (oldName: string, newName: string) => void;
-  addClient: (client: string) => void;
-  removeClient: (client: string) => void;
-  updateClient: (oldName: string, newName: string) => void;
-  addAgency: (agency: Agency) => void;
-  updateAgency: (id: string, updates: Partial<Agency>) => void;
-  removeAgency: (id: string) => void;
-  addUser: (user: User) => void;
-  removeUser: (id: string) => void;
-  updateUser: (id: string, updates: Partial<User>) => void;
-  updatePassword: (userId: string, newPassword: string) => void;
-  importBulkData: (newCities: string[], newClients: string[], newAgencies?: Agency[]) => void;
-  clearAllData: () => void;
-  toggleMP: (agencyId: string) => void;
-  resetMPForClient: (clientName: string) => void;
-  resetAllMP: () => void;
-  login: (email: string, password?: string) => boolean;
+  loading: boolean;
+  addCity: (city: string) => Promise<void>;
+  removeCity: (city: string) => Promise<void>;
+  updateCity: (oldName: string, newName: string) => Promise<void>;
+  addClient: (client: string) => Promise<void>;
+  removeClient: (client: string) => Promise<void>;
+  updateClient: (oldName: string, newName: string) => Promise<void>;
+  addAgency: (agency: Agency) => Promise<void>;
+  updateAgency: (id: string, updates: Partial<Agency>) => Promise<void>;
+  removeAgency: (id: string) => Promise<void>;
+  addUser: (user: User) => Promise<void>;
+  removeUser: (id: string) => Promise<void>;
+  updateUser: (id: string, updates: Partial<User>) => Promise<void>;
+  updatePassword: (userId: string, newPassword: string) => Promise<void>;
+  importBulkData: (newCities: string[], newClients: string[], newAgencies?: Agency[]) => Promise<void>;
+  clearAllData: () => Promise<void>;
+  toggleMP: (agencyId: string) => Promise<void>;
+  resetMPForClient: (clientName: string) => Promise<void>;
+  resetAllMP: () => Promise<void>;
+  login: (email: string, password?: string) => Promise<void>;
+  createNewUserManual: (email: string, password: string, name: string, role: 'admin' | 'user') => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
+const DEFAULT_CITIES = ['Casablanca', 'Berrechid', 'Rabat', 'Tanger', 'Marrakech'];
+const DEFAULT_CLIENTS = [
+  'Al Akhdar Bank', 'ABB', 'AWB', 'Bank Al Yousr', 'BCP', 'BMCE', 'BMCI', 
+  'CFG', 'CIH', 'CAM', 'CDM', 'SAHAM', 'UMNIA', 'Wafa Cash', 'Arab Bank', 'HPS', 'TGR'
+];
+
 export const DataProvider = ({ children }: { children: ReactNode }) => {
-  const [cities, setCities] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('ncrm_cities');
-      return saved ? JSON.parse(saved) : ['Casablanca', 'Berrechid', 'Rabat', 'Tanger', 'Marrakech'];
-    } catch (e) {
-      console.error("Failed to load cities", e);
-      return ['Casablanca', 'Berrechid', 'Rabat', 'Tanger', 'Marrakech'];
-    }
-  });
+  const [cities, setCities] = useState<string[]>(DEFAULT_CITIES);
+  const [clients, setClients] = useState<string[]>(DEFAULT_CLIENTS);
+  const [agencies, setAgencies] = useState<Agency[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const [clients, setClients] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('ncrm_clients');
-      return saved ? JSON.parse(saved) : [
-        'Al Akhdar Bank', 'ABB', 'AWB', 'Bank Al Yousr', 'BCP', 'BMCE', 'BMCI', 
-        'CFG', 'CIH', 'CAM', 'CDM', 'SAHAM', 'UMNIA', 'Wafa Cash', 'Arab Bank', 'HPS', 'TGR'
-      ];
-    } catch (e) {
-      console.error("Failed to load clients", e);
-      return ['Al Akhdar Bank', 'ABB', 'AWB', 'Bank Al Yousr', 'BCP', 'BMCE', 'BMCI', 'CFG', 'CIH', 'CAM', 'CDM', 'SAHAM', 'UMNIA'];
+  // Test connection on boot
+  useEffect(() => {
+    async function testConnection() {
+      try {
+        await getDocFromServer(doc(db, 'test', 'connection'));
+      } catch (error) {
+        if(error instanceof Error && error.message.includes('the client is offline')) {
+          console.error("Please check your Firebase configuration.");
+        }
+      }
     }
-  });
-
-  const [agencies, setAgencies] = useState<Agency[]>(() => {
-    try {
-      const saved = localStorage.getItem('ncrm_agencies');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error("Failed to load agencies", e);
-    }
-    return [
-      { id: 'IMP-001', name: 'AAB Casa Yacoub El Mansour Ex CAM', city: 'Casablanca', client: 'Al Akhdar Bank', vehiclesCount: 12, sn: '52223851' },
-      { id: 'IMP-002', name: 'ABB Casa Brahim Roudani', city: 'Casablanca', client: 'ABB', vehiclesCount: 8, sn: '54652759' },
-      { id: 'IMP-003', name: 'ABB CASA GHANDI 2', city: 'Casablanca', client: 'ABB', vehiclesCount: 15, sn: '60307101' },
-      { id: 'IMP-004', name: 'ABB CASA GHANDI', city: 'Casablanca', client: 'ABB', vehiclesCount: 10, sn: '60306635' },
-      { id: 'IMP-005', name: 'ABB Casa Maarif', city: 'Casablanca', client: 'ABB', vehiclesCount: 22, sn: '54055009' },
-      { id: 'IMP-006', name: 'AWB Casa Romandie', city: 'Casablanca', client: 'AWB', vehiclesCount: 30, sn: '50779787' },
-      { id: 'IMP-007', name: 'AWB Casa Porta Anfa CA', city: 'Casablanca', client: 'AWB', vehiclesCount: 5, sn: '59863297' },
-      { id: 'IMP-008', name: 'AWB Casa Maarif 354', city: 'Casablanca', client: 'AWB', vehiclesCount: 14, sn: '54057441' },
-      { id: 'IMP-009', name: 'AWB Casa Porta Anfa CA', city: 'Casablanca', client: 'AWB', vehiclesCount: 25, sn: '50796732' },
-      { id: 'IMP-010', name: 'AWB Casa Socrate', city: 'Casablanca', client: 'AWB', vehiclesCount: 18, sn: '51661393' },
-      { id: 'IMP-011', name: 'AWB Casa Socrate', city: 'Casablanca', client: 'AWB', vehiclesCount: 12, sn: '51661396' },
-      { id: 'IMP-012', name: 'AWB Casa Riviera -Eperviers-', city: 'Casablanca', client: 'AWB', vehiclesCount: 7, sn: '50779791' },
-      { id: 'IMP-013', name: 'AWB Casa Porta Anfa CA', city: 'Casablanca', client: 'AWB', vehiclesCount: 9, sn: '59863290' },
-      { id: 'IMP-014', name: 'AWB Casa Riviera', city: 'Casablanca', client: 'AWB', vehiclesCount: 11, sn: '62690228' },
-      { id: 'IMP-015', name: 'AWB Casa Palmier', city: 'Casablanca', client: 'AWB', vehiclesCount: 33, sn: '50780161' },
-      { id: 'IMP-016', name: 'AWB Bank Assafa Casa Palmier 9 Avril', city: 'Casablanca', client: 'AWB', vehiclesCount: 16, sn: '50796698' },
-      { id: 'IMP-017', name: 'AWB Casa Romandie', city: 'Casablanca', client: 'AWB', vehiclesCount: 20, sn: '51661427' },
-      { id: 'IMP-018', name: 'AWB Bank Assafa Casa Ghandi', city: 'Casablanca', client: 'AWB', vehiclesCount: 13, sn: '50796737' },
-      { id: 'IMP-019', name: 'AWB Casa Standhal', city: 'Casablanca', client: 'AWB', vehiclesCount: 41, sn: '90066159' },
-      { id: 'IMP-020', name: 'AWB Casa Romandie', city: 'Casablanca', client: 'AWB', vehiclesCount: 12, sn: '51661423' },
-      { id: 'IMP-021', name: 'Bank Al Yousr Casa Ghandi', city: 'Casablanca', client: 'Bank Al Yousr', vehiclesCount: 5, sn: '54478721' },
-      { id: 'IMP-022', name: 'BP Casa Tarik El Jadida Al Fath', city: 'Casablanca', client: 'BCP', vehiclesCount: 22, sn: '49018982' },
-      { id: 'IMP-023', name: 'BP Casa Socrate', city: 'Casablanca', client: 'BCP', vehiclesCount: 15, sn: '45178468' },
-      { id: 'IMP-024', name: 'BP Casa Al Fath CA', city: 'Casablanca', client: 'BCP', vehiclesCount: 8, sn: '50802129' },
-      { id: 'IMP-025', name: 'BP Casa Yacoub El Mansour', city: 'Casablanca', client: 'BCP', vehiclesCount: 10, sn: '46053865' },
-      { id: 'IMP-026', name: 'BMCE CASA YACOUB EL MANSOUR', city: 'Casablanca', client: 'BMCE', vehiclesCount: 19, sn: '60686836' },
-      { id: 'IMP-027', name: 'BMCE MAARIF BIR ANZARANE', city: 'Casablanca', client: 'BMCE', vehiclesCount: 11, sn: '60686853' },
-      { id: 'IMP-028', name: 'BMCI Casa Yacoub El Mansour', city: 'Casablanca', client: 'BMCI', vehiclesCount: 7, sn: '58380258' },
-      { id: 'IMP-029', name: 'CFG Casa Paul Zivaco', city: 'Casablanca', client: 'CFG', vehiclesCount: 4, sn: '54480655' },
-      { id: 'IMP-030', name: 'CIH Casa Romandie', city: 'Casablanca', client: 'CIH', vehiclesCount: 16, sn: '60452412' },
-      { id: 'IMP-031', name: 'CAM Casa Onapar', city: 'Casablanca', client: 'CAM', vehiclesCount: 9, sn: '52223045' },
-      { id: 'IMP-032', name: 'CDM Casa Socrate', city: 'Casablanca', client: 'CDM', vehiclesCount: 13, sn: '54054181' },
-      { id: 'IMP-033', name: 'Casa EQDOM', city: 'Casablanca', client: 'SAHAM', vehiclesCount: 5, sn: '50798547' },
-      { id: 'IMP-034', name: 'UMNIA BANK Casa Siege', city: 'Casablanca', client: 'UMNIA', vehiclesCount: 10, sn: '52964455' },
-      { id: 'IMP-035', name: 'TGR SETTAT', city: 'Berrechid', client: 'TGR', vehiclesCount: 1, sn: '58382165' },
-      { id: 'IMP-036', name: 'TGR Casa Nouacer TP', city: 'Berrechid', client: 'TGR', vehiclesCount: 1, sn: '90076575' },
-      { id: 'IMP-037', name: 'Settat Hassan II', city: 'Berrechid', client: 'CDM', vehiclesCount: 11, sn: '59349932' },
-      { id: 'IMP-038', name: 'Berrechid Med V 0258', city: 'Berrechid', client: 'AWB', vehiclesCount: 6, sn: '55704511' },
-    ];
-  });
-
-  const [users, setUsers] = useState<User[]>(() => {
-    try {
-      const saved = localStorage.getItem('ncrm_users');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error("Failed to load users", e);
-    }
-    return [
-      { id: 'USR-001', name: 'Admin Principal', email: 'admin@ncr-maroc.com', role: 'admin', password: 'admin', createdAt: new Date().toISOString() },
-      { id: 'USR-002', name: 'Agent Logistique', email: 'agent@ncr-maroc.com', role: 'user', password: 'user', createdAt: new Date().toISOString() },
-    ];
-  });
-
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    try {
-      const saved = sessionStorage.getItem('ncrm_current_user');
-      return saved ? JSON.parse(saved) : null;
-    } catch (e) {
-      return null;
-    }
-  });
+    testConnection();
+  }, []);
 
   useEffect(() => {
-    try {
-      if (currentUser) {
-        sessionStorage.setItem('ncrm_current_user', JSON.stringify(currentUser));
+    const unsubAuth = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      if (firebaseUser) {
+        // Sync user role from Firestore
+        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        if (userDoc.exists()) {
+          setCurrentUser({
+            id: firebaseUser.uid,
+            ...userDoc.data() as Omit<User, 'id'>
+          });
+        } else {
+          // New user defaults
+          const newUser: Omit<User, 'id'> = {
+            name: firebaseUser.displayName || 'Nouvel Utilisateur',
+            email: firebaseUser.email || '',
+            role: firebaseUser.email === 'amine.mlil23@gmail.com' ? 'admin' : 'user',
+            createdAt: new Date().toISOString()
+          };
+          await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+          setCurrentUser({ id: firebaseUser.uid, ...newUser });
+        }
       } else {
-        sessionStorage.removeItem('ncrm_current_user');
+        setCurrentUser(null);
       }
-    } catch (e) {
-      console.error("Failed to save current user", e);
-    }
+      setLoading(false);
+    });
+
+    return () => unsubAuth();
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    // Real-time sync for metadata
+    const unsubMeta = onSnapshot(doc(db, 'metadata', 'config'), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.cities) setCities(data.cities);
+        if (data.clients) setClients(data.clients);
+      }
+    });
+
+    // Real-time sync for agencies
+    const unsubAgencies = onSnapshot(collection(db, 'agencies'), (snap) => {
+      const agencyList = snap.docs.map(d => ({ id: d.id, ...d.data() } as Agency));
+      setAgencies(agencyList);
+    });
+
+    // Real-time sync for users
+    const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
+      const userList = snap.docs.map(d => ({ id: d.id, ...d.data() } as User));
+      setUsers(userList);
+    });
+
+    return () => {
+      unsubMeta();
+      unsubAgencies();
+      unsubUsers();
+    };
   }, [currentUser]);
 
-  useEffect(() => {
+  const updateMetadata = async (newCities: string[], newClients: string[]) => {
     try {
-      localStorage.setItem('ncrm_cities', JSON.stringify(cities));
+      await setDoc(doc(db, 'metadata', 'config'), { cities: newCities, clients: newClients });
     } catch (e) {
-      console.error("Failed to save cities", e);
+      handleFirestoreError(e, 'update', 'metadata/config');
     }
-  }, [cities]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('ncrm_clients', JSON.stringify(clients));
-    } catch (e) {
-      console.error("Failed to save clients", e);
-    }
-  }, [clients]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('ncrm_agencies', JSON.stringify(agencies));
-    } catch (e) {
-      console.error("Failed to save agencies", e);
-    }
-  }, [agencies]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('ncrm_users', JSON.stringify(users));
-    } catch (e) {
-      console.error("Failed to save users", e);
-    }
-  }, [users]);
-
-  const clearAllData = () => {
-    localStorage.removeItem('ncrm_cities');
-    localStorage.removeItem('ncrm_clients');
-    localStorage.removeItem('ncrm_agencies');
-    localStorage.removeItem('ncrm_users');
-    setCities(['Casablanca', 'Berrechid', 'Rabat', 'Tanger', 'Marrakech']);
-    setClients([
-      'Al Akhdar Bank', 'ABB', 'AWB', 'Bank Al Yousr', 'BCP', 'BMCE', 'BMCI', 
-      'CFG', 'CIH', 'CAM', 'CDM', 'SAHAM', 'UMNIA', 'Wafa Cash', 'Arab Bank', 'HPS', 'TGR'
-    ]);
-    setAgencies([
-      { id: 'IMP-001', name: 'AAB Casa Yacoub El Mansour Ex CAM', city: 'Casablanca', client: 'Al Akhdar Bank', vehiclesCount: 12, sn: '52223851' },
-      { id: 'IMP-002', name: 'ABB Casa Brahim Roudani', city: 'Casablanca', client: 'ABB', vehiclesCount: 8, sn: '54652759' },
-      { id: 'IMP-003', name: 'ABB CASA GHANDI 2', city: 'Casablanca', client: 'ABB', vehiclesCount: 15, sn: '60307101' },
-      { id: 'IMP-004', name: 'ABB CASA GHANDI', city: 'Casablanca', client: 'ABB', vehiclesCount: 10, sn: '60306635' },
-      { id: 'IMP-005', name: 'ABB Casa Maarif', city: 'Casablanca', client: 'ABB', vehiclesCount: 22, sn: '54055009' },
-      { id: 'IMP-006', name: 'AWB Casa Romandie', city: 'Casablanca', client: 'AWB', vehiclesCount: 30, sn: '50779787' },
-      { id: 'IMP-035', name: 'TGR SETTAT', city: 'Berrechid', client: 'TGR', vehiclesCount: 1, sn: '58382165' },
-    ]);
-    setUsers([
-      { id: 'USR-001', name: 'Admin Principal', email: 'admin@ncr-maroc.com', role: 'admin', password: 'admin', createdAt: new Date().toISOString() },
-      { id: 'USR-002', name: 'Agent Logistique', email: 'agent@ncr-maroc.com', role: 'user', password: 'user', createdAt: new Date().toISOString() },
-    ]);
   };
 
-  const addCity = (city: string) => {
+  const addCity = async (city: string) => {
     if (city && !cities.includes(city)) {
-      setCities([...cities, city]);
+      const next = [...cities, city];
+      await updateMetadata(next, clients);
     }
   };
 
-  const removeCity = (city: string) => {
-    setCities(cities.filter(c => c !== city));
+  const removeCity = async (city: string) => {
+    const next = cities.filter(c => c !== city);
+    await updateMetadata(next, clients);
   };
 
-  const updateCity = (oldName: string, newName: string) => {
+  const updateCity = async (oldName: string, newName: string) => {
     if (newName && !cities.includes(newName)) {
-      setCities(cities.map(c => (c === oldName ? newName : c)));
-      setAgencies(prev => prev.map(a => a.city === oldName ? { ...a, city: newName } : a));
+      const next = cities.map(c => (c === oldName ? newName : c));
+      await updateMetadata(next, clients);
     }
   };
 
-  const addClient = (client: string) => {
+  const addClient = async (client: string) => {
     if (client && !clients.includes(client)) {
-      setClients([...clients, client]);
+      const next = [...clients, client];
+      await updateMetadata(cities, next);
     }
   };
 
-  const removeClient = (client: string) => {
-    setClients(clients.filter(c => c !== client));
+  const removeClient = async (client: string) => {
+    const next = clients.filter(c => c !== client);
+    await updateMetadata(cities, next);
   };
 
-  const updateClient = (oldName: string, newName: string) => {
+  const updateClient = async (oldName: string, newName: string) => {
     if (newName && !clients.includes(newName)) {
-      setClients(clients.map(c => (c === oldName ? newName : c)));
-      setAgencies(prev => prev.map(a => a.client === oldName ? { ...a, client: newName } : a));
+      const next = clients.map(c => (c === oldName ? newName : c));
+      await updateMetadata(cities, next);
     }
   };
 
-  const addAgency = (agency: Agency) => {
-    setAgencies(prev => [...prev, agency]);
+  const addAgency = async (agency: Agency) => {
+    try {
+      const { id, ...data } = agency;
+      await setDoc(doc(db, 'agencies', id), {
+        ...data,
+        updatedAt: new Date().toISOString(),
+        updatedBy: auth.currentUser?.uid
+      });
+    } catch (e) {
+      handleFirestoreError(e, 'create', `agencies/${agency.id}`);
+    }
   };
 
-  const updateAgency = (id: string, updates: Partial<Agency>) => {
-    setAgencies(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
+  const updateAgency = async (id: string, updates: Partial<Agency>) => {
+    try {
+      await updateDoc(doc(db, 'agencies', id), {
+        ...updates,
+        updatedAt: new Date().toISOString(),
+        updatedBy: auth.currentUser?.uid
+      });
+    } catch (e) {
+      handleFirestoreError(e, 'update', `agencies/${id}`);
+    }
   };
 
-  const removeAgency = (id: string) => {
-    setAgencies(prev => prev.filter(a => a.id !== id));
+  const removeAgency = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'agencies', id));
+    } catch (e) {
+      handleFirestoreError(e, 'delete', `agencies/${id}`);
+    }
   };
 
-  const importBulkData = (newCities: string[], newClients: string[], newAgencies?: Agency[]) => {
-    setCities(prev => {
-      const combined = [...prev, ...newCities];
-      return Array.from(new Set(combined.filter(c => c.trim() !== '')));
-    });
-    setClients(prev => {
-      const combined = [...prev, ...newClients];
-      return Array.from(new Set(combined.filter(c => c.trim() !== '')));
-    });
+  const importBulkData = async (newCities: string[], newClients: string[], newAgencies?: Agency[]) => {
+    const batch = writeBatch(db);
+    
+    // Process cities & clients
+    const finalCities = Array.from(new Set([...cities, ...newCities].filter(c => c.trim() !== '')));
+    const finalClients = Array.from(new Set([...clients, ...newClients].filter(c => c.trim() !== '')));
+    
+    batch.set(doc(db, 'metadata', 'config'), { cities: finalCities, clients: finalClients });
+
+    // Process agencies
     if (newAgencies) {
-      setAgencies(prev => [...prev, ...newAgencies]);
+      newAgencies.forEach(a => {
+        const { id, ...data } = a;
+        batch.set(doc(db, 'agencies', id), {
+          ...data,
+          updatedAt: new Date().toISOString(),
+          updatedBy: auth.currentUser?.uid
+        });
+      });
+    }
+
+    try {
+      await batch.commit();
+    } catch (e) {
+      handleFirestoreError(e, 'write', 'bulk_import');
     }
   };
 
-  const toggleMP = (agencyId: string) => {
-    setAgencies(prev => prev.map(a => a.id === agencyId ? { ...a, isMP: !a.isMP } : a));
-  };
+  const clearAllData = async () => {
+    const batch = writeBatch(db);
+    
+    // Clear agencies (note: batch limit is 500)
+    agencies.forEach(a => {
+      batch.delete(doc(db, 'agencies', a.id));
+    });
 
-  const resetMPForClient = (clientName: string) => {
-    setAgencies(prev => prev.map(a => a.client === clientName ? { ...a, isMP: false } : a));
-  };
+    batch.set(doc(db, 'metadata', 'config'), { cities: DEFAULT_CITIES, clients: DEFAULT_CLIENTS });
 
-  const resetAllMP = () => {
-    setAgencies(prev => prev.map(a => ({ ...a, isMP: false })));
-  };
-
-  const addUser = (user: User) => {
-    setUsers(prev => [...prev, user]);
-  };
-
-  const removeUser = (id: string) => {
-    setUsers(prev => prev.filter(u => u.id !== id));
-  };
-
-  const updateUser = (id: string, updates: Partial<User>) => {
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
-    if (currentUser?.id === id) {
-      setCurrentUser(prev => prev ? { ...prev, ...updates } : null);
+    try {
+      await batch.commit();
+    } catch (e) {
+      handleFirestoreError(e, 'delete', 'clear_all');
     }
   };
 
-  const updatePassword = (userId: string, newPassword: string) => {
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, password: newPassword } : u));
-    if (currentUser?.id === userId) {
-      setCurrentUser(prev => prev ? { ...prev, password: newPassword } : null);
+  const toggleMP = async (agencyId: string) => {
+    const agency = agencies.find(a => a.id === agencyId);
+    if (agency) {
+      await updateAgency(agencyId, { isMP: !agency.isMP });
     }
   };
 
-  const login = (email: string, password?: string) => {
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (user) {
-      // If a password is provided (it will be passed from Login.tsx), verify it
-      if (password && user.password && user.password !== password) {
-        return false;
-      }
-      setCurrentUser(user);
-      return true;
-    }
-    return false;
+  const resetMPForClient = async (clientName: string) => {
+    const batch = writeBatch(db);
+    agencies.filter(a => a.client === clientName).forEach(a => {
+      batch.update(doc(db, 'agencies', a.id), { isMP: false });
+    });
+    await batch.commit();
   };
 
-  const logout = () => {
-    setCurrentUser(null);
-    sessionStorage.removeItem('ncrm_current_user');
+  const resetAllMP = async () => {
+    const batch = writeBatch(db);
+    agencies.forEach(a => {
+      batch.update(doc(db, 'agencies', a.id), { isMP: false });
+    });
+    await batch.commit();
+  };
+
+  const addUser = async (user: User) => {
+    const { id, ...data } = user;
+    await setDoc(doc(db, 'users', id), data);
+  };
+
+  const removeUser = async (id: string) => {
+    await deleteDoc(doc(db, 'users', id));
+  };
+
+  const updateUser = async (id: string, updates: Partial<User>) => {
+    await updateDoc(doc(db, 'users', id), updates);
+  };
+
+  const updatePassword = async (userId: string, newPassword: string) => {
+    await updateDoc(doc(db, 'users', userId), { password: newPassword });
+  };
+
+  const login = async (email: string, password?: string) => {
+    if (!password) throw new Error("Le mot de passe est requis.");
+    await signInWithEmailAndPassword(auth, email, password);
+  };
+
+  const createNewUserManual = async (email: string, password: string, name: string, role: 'admin' | 'user') => {
+    if (currentUser?.role !== 'admin') {
+      throw new Error("Seul l'administrateur peut créer des utilisateurs.");
+    }
+
+    const response = await fetch("/api/admin/create-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        password,
+        role,
+        requesterEmail: currentUser.email
+      })
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || "Erreur lors de la création de l'utilisateur.");
+    }
+
+    // Create user record in Firestore
+    await setDoc(doc(db, 'users', result.uid), {
+      name,
+      email,
+      role,
+      createdAt: new Date().toISOString()
+    });
+  };
+
+  const loginWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+  };
+
+  const logout = async () => {
+    await signOut(auth);
     window.location.href = '/login';
   };
 
@@ -342,6 +426,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       agencies,
       users,
       currentUser,
+      loading,
       addCity, 
       removeCity, 
       updateCity, 
@@ -361,6 +446,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       resetMPForClient,
       resetAllMP,
       login,
+      createNewUserManual,
+      loginWithGoogle,
       logout
     }}>
       {children}

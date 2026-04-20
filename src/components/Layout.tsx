@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, CreditCard, Building2, Settings, Menu, User, LogOut, Filter } from 'lucide-react';
+import { LayoutDashboard, CreditCard, Building2, Settings, Menu, User, LogOut, Filter, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useState, useEffect } from 'react';
@@ -13,6 +13,10 @@ const Sidebar = ({ isExpanded, setIsExpanded }: { isExpanded: boolean, setIsExpa
     { icon: Filter, label: 'Filtre', path: '/dashboard' },
     { icon: Building2, label: 'Agences', path: '/fleet' },
   ];
+
+  if (currentUser?.role === 'admin') {
+    topItems.push({ icon: Shield, label: 'Administration', path: '/admin' });
+  }
 
   const bottomItems = [
     { icon: User, label: 'Mon Profil', path: '/profile' },
@@ -203,12 +207,18 @@ const TopBar = ({ onMenuClick, isSidebarExpanded }: { onMenuClick: () => void, i
 
 const BottomNav = () => {
   const location = useLocation();
+  const { currentUser } = useData();
   const navItems = [
     { icon: Filter, label: 'Filtre', path: '/dashboard' },
     { icon: Building2, label: 'Agences', path: '/fleet' },
     { icon: User, label: 'Profil', path: '/profile' },
-    { icon: Settings, label: 'Paramètres', path: '/settings' },
   ];
+
+  if (currentUser?.role === 'admin') {
+    navItems.push({ icon: Shield, label: 'Admin', path: '/admin' });
+  }
+
+  navItems.push({ icon: Settings, label: 'Paramètres', path: '/settings' });
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-surface-container h-16 flex items-center justify-around px-2 z-[100] lg:hidden">

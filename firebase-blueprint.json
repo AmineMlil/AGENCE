@@ -1,0 +1,64 @@
+{
+  "entities": {
+    "Agency": {
+      "title": "Agency",
+      "description": "Information about a banking agency and its maintenance status.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Agency name" },
+        "city": { "type": "string", "description": "City where the agency is located" },
+        "client": { "type": "string", "description": "Client name (bank)" },
+        "vehiclesCount": { "type": "number", "description": "Number of vehicles or equipment" },
+        "sn": { "type": "string", "description": "Serial Number (SN)" },
+        "tid": { "type": "string", "description": "Terminal ID (TID)" },
+        "ipAddress": { "type": "string", "description": "IP Address" },
+        "subnetMask": { "type": "string", "description": "Subnet Mask" },
+        "gateway": { "type": "string", "description": "Gateway" },
+        "dns": { "type": "string", "description": "DNS Server" },
+        "gps": { "type": "string", "description": "GPS Coordinates" },
+        "computerName": { "type": "string", "description": "Associated Computer Name" },
+        "remotePort": { "type": "string", "description": "Remote Port" },
+        "remoteAddress": { "type": "string", "description": "Remote Address" },
+        "isMP": { "type": "boolean", "description": "Maintenance Status (Maintenue/Pas Maintenue)" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "updatedBy": { "type": "string", "description": "UID of the user who last updated" }
+      },
+      "required": ["name", "city", "client"]
+    },
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User account information and roles.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "role"]
+    },
+    "AppMetadata": {
+      "title": "App Metadata",
+      "description": "Global lists for cities and clients.",
+      "type": "object",
+      "properties": {
+        "cities": { "type": "array", "items": { "type": "string" } },
+        "clients": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "firestore": {
+    "/agencies/{agencyId}": {
+      "schema": "Agency",
+      "description": "Collection of all agencies."
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles restricted to owners or admins."
+    },
+    "/metadata/config": {
+      "schema": "AppMetadata",
+      "description": "Global configuration and reference lists."
+    }
+  }
+}
