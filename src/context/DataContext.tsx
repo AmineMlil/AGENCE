@@ -14,10 +14,9 @@ import {
 } from 'firebase/firestore';
 import { 
   onAuthStateChanged, 
-  signInWithPopup, 
-  GoogleAuthProvider, 
   signOut,
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   User as FirebaseUser
 } from 'firebase/auth';
 import { db, auth } from '../lib/firebase';
@@ -114,8 +113,8 @@ interface DataContextType {
   resetMPForClient: (clientName: string) => Promise<void>;
   resetAllMP: () => Promise<void>;
   login: (email: string, password?: string) => Promise<void>;
+  register: (email: string, password: string, name: string) => Promise<void>;
   createNewUserManual: (email: string, password: string, name: string, role: 'admin' | 'user') => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
   logout: () => void;
 }
 
@@ -197,11 +196,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       setAgencies(agencyList);
     });
 
-    // Real-time sync for users
-    const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
-      const userList = snap.docs.map(d => ({ id: d.id, ...d.data() } as User));
-      setUsers(userList);
-    });
+    // Real-time sync for users (Admin only)
+    let unsubUsers = () => {};
+    if (currentUser.role === 'admin') {
+      unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
+        const userList = snap.docs.map(d => ({ id: d.id, ...d.data() } as User));
+        setUsers(userList);
+      });
+    }
 
     return () => {
       unsubMeta();
@@ -379,6 +381,21 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     await signInWithEmailAndPassword(auth, email, password);
   };
 
+  const register = async (email: string, password: string, name: string) => {
+    const { user } = await createUserWithEmailAndPassword(auth, email, password);
+    
+    // Create user doc in Firestore
+    const newUser: Omit<User, 'id'> = {
+      name,
+      email,
+      role: email === 'amine.mlil23@gmail.com' ? 'admin' : 'user',
+      createdAt: new Date().toISOString()
+    };
+    
+    await setDoc(doc(db, 'users', user.uid), newUser);
+    setCurrentUser({ id: user.uid, ...newUser });
+  };
+
   const createNewUserManual = async (email: string, password: string, name: string, role: 'admin' | 'user') => {
     if (currentUser?.role !== 'admin') {
       throw new Error("Seul l'administrateur peut créer des utilisateurs.");
@@ -407,11 +424,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       role,
       createdAt: new Date().toISOString()
     });
-  };
-
-  const loginWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
   };
 
   const logout = async () => {
@@ -446,8 +458,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       resetMPForClient,
       resetAllMP,
       login,
+      register,
       createNewUserManual,
-      loginWithGoogle,
       logout
     }}>
       {children}

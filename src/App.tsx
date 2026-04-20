@@ -10,6 +10,7 @@ import Layout from './components/Layout';
 import { useData } from './context/DataContext';
 
 import Admin from './pages/Admin';
+import Register from './pages/Register';
 
 const ProtectedRoute = () => {
   const { currentUser, loading } = useData();
@@ -34,6 +35,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<Dashboard />} />

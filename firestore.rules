@@ -14,7 +14,7 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == "amine.mlil23@gmail.com" ||
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin"
       );
     }
 
@@ -84,8 +84,10 @@ service cloud.firestore {
       
       allow create: if isSignedIn() && 
                     isOwner(userId) && 
-                    isValidUser(incoming()) &&
-                    incoming().role == 'user'; // Users cannot self-promote to admin
+                    isValidUser(incoming()) && (
+                      incoming().role == 'user' ||
+                      request.auth.token.email == "amine.mlil23@gmail.com"
+                    );
       
       allow update: if isSignedIn() && 
                     isValidId(userId) && (

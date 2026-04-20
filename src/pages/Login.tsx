@@ -1,7 +1,7 @@
 import { ArrowRight, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 
 export default function Login() {
@@ -11,7 +11,7 @@ export default function Login() {
   const [error, setError] = useState(false);
   
   const navigate = useNavigate();
-  const { loginWithGoogle, login, currentUser } = useData();
+  const { login, currentUser } = useData();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   React.useEffect(() => {
@@ -19,16 +19,6 @@ export default function Login() {
       navigate('/dashboard');
     }
   }, [currentUser, navigate]);
-
-  const handleGoogleLogin = async () => {
-    try {
-      await loginWithGoogle();
-    } catch (err) {
-      console.error(err);
-      setError(true);
-      setTimeout(() => setError(false), 3000);
-    }
-  };
 
   const handleManualLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,25 +116,16 @@ export default function Login() {
                   <span>{isLoggingIn ? 'Connexion...' : 'Se connecter'}</span>
                   <ArrowRight size={18} />
                 </button>
-                
-                <div className="flex items-center gap-4 py-2">
-                  <div className="flex-grow h-px bg-surface-container"></div>
-                  <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest leading-none">ou</span>
-                  <div className="flex-grow h-px bg-surface-container"></div>
-                </div>
-
-                <button 
-                  type="button"
-                  onClick={loginWithGoogle}
-                  className="w-full bg-white text-on-surface font-bold py-4 rounded-lg flex items-center justify-center gap-3 border-2 border-surface-container hover:bg-surface-container/30 active:scale-95 transition-all"
-                >
-                  <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
-                  <span>Continuer avec Google</span>
-                </button>
               </div>
 
-              <div className="text-center pt-2">
-                <a href="#" className="text-secondary text-sm font-medium hover:text-primary transition-colors hover:underline decoration-2 underline-offset-4">
+              <div className="text-center pt-2 space-y-2">
+                <p className="text-on-surface-variant text-xs font-medium">
+                  Nouveau utilisateur ?{' '}
+                  <Link to="/register" className="text-primary font-bold hover:underline">
+                    S'inscrire
+                  </Link>
+                </p>
+                <a href="#" className="text-secondary text-sm font-medium hover:text-primary transition-colors hover:underline decoration-2 underline-offset-4 block">
                   Mot de passe oublié ?
                 </a>
               </div>
